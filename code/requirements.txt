@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+streamlit
+tensorflow
+nltk
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+wordcloud
+pydantic
+requests
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+beautifulsoup4

@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardian Sentinel | AI Email Security</title>
+    <style>
+        :root {
+            --bg: #0d0d10;
+            --panel: #141418;
+            --panel-soft: #171b1f;
+            --panel-muted: #111319;
+            --line: #2a2e36;
+            --line-soft: #1d2229;
+            --cyan: #08d4ff;
+            --cyan-soft: rgba(8, 212, 255, 0.18);
+            --green: #20ff39;
+            --green-soft: rgba(32, 255, 57, 0.10);
+            --red: #ff526d;
+            --red-soft: rgba(255, 82, 109, 0.10);
+            --text: #eef2f7;
+            --muted: #8d94a3;
+            --muted-soft: #687081;
+            --button: #384055;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html, body {
+            margin: 0;
+            min-height: 100%;
+            background: #0b0c0f;
+            color: var(--text);
+            font-family: "Segoe UI", Inter, Arial, sans-serif;
+        }
+
+        body {
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        .app-shell {
+            display: grid;
+            grid-template-columns: 376px 562px minmax(600px, 1fr);
+            gap: 10px;
+            height: calc(100vh - 20px);
+        }
+
+        .panel {
+            background: var(--panel);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            min-height: 0;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            padding: 26px 24px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 6px;
+        }
+
+        .brand-mark {
+            width: 28px;
+            height: 28px;
+            border-radius: 999px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(180deg, #53a9ff, #356dff);
+            box-shadow: 0 0 0 3px rgba(8, 212, 255, 0.08);
+            font-size: 15px;
+        }
+
+        .brand-title {
+            color: var(--cyan);
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: 0.1px;
+        }
+
+        .brand-subtitle {
+            color: var(--muted);
+            font-size: 13px;
+            margin-bottom: 30px;
+        }
+
+        .sync-button {
+            border: 0;
+            background: linear-gradient(90deg, #1bb7ea, #1197d6);
+            color: white;
+            border-radius: 11px;
+            padding: 14px 18px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.16s ease, box-shadow 0.16s ease, opacity 0.16s ease;
+            box-shadow: 0 14px 30px rgba(17, 151, 214, 0.18);
+        }
+
+        .sync-button:hover {
+            transform: translateY(-1px);
+        }
+
+        .sync-button:disabled {
+            opacity: 0.75;
+            cursor: wait;
+            transform: none;
+        }
+
+        .sidebar-divider {
+            height: 1px;
+            background: var(--line);
+            margin: 16px 0;
+        }
+
+        .stats {
+            display: grid;
+            gap: 10px;
+        }
+
+        .stat-card {
+            background: #132027;
+            border: 1px solid rgba(8, 212, 255, 0.26);
+            border-radius: 10px;
+            min-height: 82px;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            padding: 14px;
+        }
+
+        .stat-value {
+            font-size: 17px;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+
+        .stat-value.total,
+        .stat-value.safe {
+            color: var(--cyan);
+        }
+
+        .stat-value.threat {
+            color: var(--red);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .sidebar-footer {
+            margin-top: auto;
+            padding-top: 26px;
+            font-size: 12px;
+            color: var(--muted-soft);
+            text-align: center;
+        }
+
+        .inbox-panel {
+            display: flex;
+            flex-direction: column;
+            padding: 22px 24px 18px;
+            min-height: 0;
+        }
+
+        .tab-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            align-items: end;
+            padding: 0 10px;
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 18px;
+        }
+
+        .tab-button {
+            border: 0;
+            background: transparent;
+            color: var(--muted);
+            font-size: 16px;
+            font-weight: 700;
+            padding: 16px 12px 17px;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: color 0.18s ease, border-color 0.18s ease;
+        }
+
+        .tab-button.active {
+            color: var(--cyan);
+            border-bottom-color: var(--cyan);
+        }
+
+        .email-list {
+            overflow: auto;
+            padding-right: 2px;
+            display: grid;
+            gap: 8px;
+        }
+
+        .email-card {
+            border: 1px solid rgba(8, 212, 255, 0.26);
+            background: #132027;
+            border-radius: 12px;
+            padding: 14px 16px;
+            cursor: pointer;
+            transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+        }
+
+        .email-card:hover {
+            border-color: rgba(8, 212, 255, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .email-card.active {
+            border-color: var(--cyan);
+            box-shadow: 0 0 0 1px rgba(8, 212, 255, 0.3), 0 0 18px rgba(8, 212, 255, 0.30);
+        }
+
+        .email-card-header {
+            display: grid;
+            grid-template-columns: 24px 24px 1fr auto;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .icon-box,
+        .star-box {
+            width: 18px;
+            height: 18px;
+            border-radius: 4px;
+            display: grid;
+            place-items: center;
+            font-size: 10px;
+        }
+
+        .icon-box {
+            border: 1px solid #5a6270;
+            color: #8690a1;
+        }
+
+        .star-box {
+            background: #29434d;
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            color: #b9c3d3;
+        }
+
+        .email-sender {
+            font-size: 12px;
+            color: #b0bdd0;
+            margin-bottom: 6px;
+        }
+
+        .email-subject {
+            font-size: 16px;
+            line-height: 1.28;
+            font-weight: 700;
+            color: #edf4fc;
+            margin-bottom: 8px;
+        }
+
+        .email-preview {
+            font-size: 13px;
+            line-height: 1.45;
+            color: #d0d7e0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .email-badge {
+            font-size: 12px;
+            font-weight: 700;
+            padding: 5px 11px;
+            border-radius: 999px;
+        }
+
+        .email-badge.safe {
+            color: var(--cyan);
+            background: rgba(8, 212, 255, 0.12);
+        }
+
+        .email-badge.threat {
+            color: var(--red);
+            background: rgba(255, 82, 109, 0.12);
+        }
+
+        .detail-panel {
+            display: flex;
+            flex-direction: column;
+            padding: 24px 24px 10px;
+            min-height: 0;
+        }
+
+        .detail-scroll {
+            min-height: 0;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .analysis-banner {
+            border-radius: 10px;
+            border: 2px solid var(--green);
+            background: rgba(17, 43, 17, 0.96);
+            padding: 16px 18px;
+            margin-bottom: 18px;
+        }
+
+        .analysis-banner.threat {
+            border-color: var(--red);
+            background: rgba(46, 19, 24, 0.94);
+        }
+
+        .analysis-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--green);
+            margin-bottom: 8px;
+        }
+
+        .analysis-banner.threat .analysis-title {
+            color: var(--red);
+        }
+
+        .analysis-copy {
+            color: #dce6dd;
+            font-size: 14px;
+            line-height: 1.45;
+        }
+
+        .meta-label {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .meta-value {
+            font-size: 14px;
+            color: #b9c3d1;
+            margin-bottom: 24px;
+        }
+
+        .detail-title {
+            color: var(--cyan);
+            font-size: 18px;
+            line-height: 1.35;
+            font-weight: 800;
+            margin-bottom: 18px;
+        }
+
+        .from-row {
+            margin-bottom: 18px;
+        }
+
+        .divider {
+            height: 1px;
+            background: var(--line);
+            margin: 16px 0 18px;
+        }
+
+        .body-label {
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 10px;
+        }
+
+        .body-panel {
+            border: 1px solid var(--line-soft);
+            border-radius: 8px;
+            background: #111216;
+            min-height: 122px;
+            max-height: 420px;
+            padding: 18px 16px;
+            overflow: auto;
+            color: #eef0f4;
+            line-height: 1.55;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+
+        .detail-actions {
+            position: sticky;
+            bottom: 0;
+            background: linear-gradient(180deg, rgba(20, 20, 24, 0), rgba(20, 20, 24, 1) 18%);
+            padding: 16px 0 10px;
+            margin-top: 12px;
+        }
+
+        .primary-action,
+        .danger-action {
+            width: 100%;
+            border: 0;
+            border-radius: 4px;
+            padding: 11px 14px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.16s ease, transform 0.16s ease;
+        }
+
+        .primary-action {
+            background: var(--button);
+            color: #eef2f8;
+        }
+
+        .danger-action {
+            background: rgba(255, 82, 109, 0.16);
+            color: #ffdbe2;
+            border: 1px solid rgba(255, 82, 109, 0.38);
+        }
+
+        .primary-action:hover,
+        .danger-action:hover {
+            transform: translateY(-1px);
+        }
+
+        .empty-state {
+            height: 100%;
+            display: grid;
+            place-items: center;
+            text-align: center;
+            color: var(--muted);
+            padding: 40px;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(8, 212, 255, 0.34);
+            border-radius: 999px;
+        }
+
+        @media (max-width: 1450px) {
+            .app-shell {
+                grid-template-columns: 320px 460px minmax(540px, 1fr);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="panel sidebar">
+            <div class="brand">
+                <div class="brand-mark">🛡️</div>
+                <div class="brand-title">Guardian Sentinel</div>
+            </div>
+            <div class="brand-subtitle">AI Email Security Center</div>
+
+            <button id="syncBtn" class="sync-button">🔄 Sync Live Inbox</button>
+            <div class="sidebar-divider"></div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div id="totalCount" class="stat-value total">0</div>
+                    <div class="stat-label">Total Emails</div>
+                </div>
+                <div class="stat-card">
+                    <div id="safeCount" class="stat-value safe">0</div>
+                    <div class="stat-label">Safe Emails</div>
+                </div>
+                <div class="stat-card">
+                    <div id="threatCount" class="stat-value threat">0</div>
+                    <div class="stat-label">Threats Detected</div>
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                Backend: <span id="backendUrl"></span>
+            </div>
+        </aside>
+
+        <section class="panel inbox-panel">
+            <div class="tab-row">
+                <button id="safeTab" class="tab-button active">📥&nbsp;&nbsp;Safe Inbox</button>
+                <button id="threatTab" class="tab-button">🛡️&nbsp;&nbsp;Spam</button>
+            </div>
+            <div id="emailList" class="email-list"></div>
+        </section>
+
+        <section class="panel detail-panel">
+            <div id="readingPane" class="detail-scroll">
+                <div class="empty-state">
+                    <div>
+                        <div style="font-size: 50px; margin-bottom: 14px;">✉️</div>
+                        <div style="font-size: 24px; font-weight: 700; color: #edf2f9; margin-bottom: 8px;">Select an Email</div>
+                        <div>Choose a message from the inbox to inspect the analysis, sender, and body content.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.origin;
+        const backendUrl = document.getElementById('backendUrl');
+        const syncBtn = document.getElementById('syncBtn');
+        const safeTab = document.getElementById('safeTab');
+        const threatTab = document.getElementById('threatTab');
+        const emailList = document.getElementById('emailList');
+        const readingPane = document.getElementById('readingPane');
+
+        backendUrl.textContent = API_BASE_URL;
+
+        let emails = [];
+        let currentView = 'safe';
+        let selectedEmailId = null;
+
+        safeTab.addEventListener('click', () => switchView('safe'));
+        threatTab.addEventListener('click', () => switchView('threat'));
+        syncBtn.addEventListener('click', syncInbox);
+
+        function escapeHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function getSenderDisplay(sender) {
+            if (!sender) return 'Unknown Sender';
+            return sender.split('<')[0].trim() || sender;
+        }
+
+        function getPreview(text) {
+            const normalized = String(text || '').replace(/\s+/g, ' ').trim();
+            return normalized || 'No preview available';
+        }
+
+        function safePercentage(email) {
+            if (email.is_spam) {
+                return Math.max(0, Math.min(100, email.confidence * 100));
+            }
+            return Math.max(0, Math.min(100, 100 - (email.confidence * 100)));
+        }
+
+        function switchView(view) {
+            currentView = view;
+            safeTab.classList.toggle('active', view === 'safe');
+            threatTab.classList.toggle('active', view === 'threat');
+            renderEmailList();
+        }
+
+        function updateStats() {
+            const safeEmails = emails.filter(email => !email.is_spam);
+            const threatEmails = emails.filter(email => email.is_spam);
+            document.getElementById('totalCount').textContent = String(emails.length);
+            document.getElementById('safeCount').textContent = String(safeEmails.length);
+            document.getElementById('threatCount').textContent = String(threatEmails.length);
+        }
+
+        async function syncInbox() {
+            syncBtn.disabled = true;
+            syncBtn.textContent = '⏳ Syncing Inbox...';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/sync-inbox`);
+                if (!response.ok) {
+                    throw new Error('Failed to sync inbox');
+                }
+
+                emails = await response.json();
+                updateStats();
+
+                const visibleEmails = getVisibleEmails();
+                if (visibleEmails.length && !visibleEmails.find(email => email.id === selectedEmailId)) {
+                    selectedEmailId = visibleEmails[0].id;
+                } else if (!visibleEmails.length) {
+                    selectedEmailId = null;
+                }
+
+                renderEmailList();
+                renderReadingPane();
+            } catch (error) {
+                console.error(error);
+                emailList.innerHTML = '<div class="empty-state"><div>Unable to connect to the backend inbox sync right now.</div></div>';
+                readingPane.innerHTML = '<div class="empty-state"><div>The inbox could not be loaded. Please check the backend server and Gmail connection.</div></div>';
+            } finally {
+                syncBtn.disabled = false;
+                syncBtn.textContent = '🔄 Sync Live Inbox';
+            }
+        }
+
+        function getVisibleEmails() {
+            return emails.filter(email => currentView === 'safe' ? !email.is_spam : email.is_spam);
+        }
+
+        function renderEmailList() {
+            const filtered = getVisibleEmails();
+
+            if (!filtered.length) {
+                emailList.innerHTML = `<div class="empty-state"><div>No ${currentView === 'safe' ? 'safe' : 'spam'} emails available.</div></div>`;
+                return;
+            }
+
+            emailList.innerHTML = filtered.map((email) => {
+                const activeClass = email.id === selectedEmailId ? 'active' : '';
+                const badgeClass = email.is_spam ? 'threat' : 'safe';
+                const badgeLabel = email.is_spam ? 'Threat' : 'Safe';
+                return `
+                    <div class="email-card ${activeClass}" onclick="selectEmail('${email.id}')">
+                        <div class="email-card-header">
+                            <div class="icon-box"></div>
+                            <div class="star-box">★</div>
+                            <div>
+                                <div class="email-sender">${escapeHtml(getSenderDisplay(email.sender))}</div>
+                                <div class="email-subject">${escapeHtml(email.subject)}</div>
+                            </div>
+                            <div class="email-badge ${badgeClass}">${badgeLabel}</div>
+                        </div>
+                        <div class="email-preview">${escapeHtml(getPreview(email.body_text))}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function selectEmail(id) {
+            selectedEmailId = id;
+            renderEmailList();
+            renderReadingPane();
+        }
+
+        async function sendFeedback(correctLabel) {
+            const email = emails.find(item => item.id === selectedEmailId);
+            if (!email) return;
+
+            try {
+                await fetch(`${API_BASE_URL}/feedback`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email_text: email.body_text || email.subject || '',
+                        correct_label: correctLabel
+                    })
+                });
+                alert('Feedback recorded.');
+            } catch (error) {
+                console.error(error);
+                alert('Unable to record feedback right now.');
+            }
+        }
+
+        async function deleteSelectedEmail() {
+            const email = emails.find(item => item.id === selectedEmailId);
+            if (!email) return;
+
+            const confirmed = confirm(`Delete "${email.subject}" from Gmail?`);
+            if (!confirmed) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/delete-email/${encodeURIComponent(email.id)}`, {
+                    method: 'POST'
+                });
+
+                if (!response.ok) {
+                    throw new Error('Delete failed');
+                }
+
+                emails = emails.filter(item => item.id !== email.id);
+                selectedEmailId = getVisibleEmails()[0]?.id || null;
+                updateStats();
+                renderEmailList();
+                renderReadingPane();
+            } catch (error) {
+                console.error(error);
+                alert('Delete failed. Check backend Gmail permissions.');
+            }
+        }
+
+        function renderReadingPane() {
+            const email = emails.find(item => item.id === selectedEmailId);
+
+            if (!email) {
+                readingPane.innerHTML = `
+                    <div class="empty-state">
+                        <div>
+                            <div style="font-size: 50px; margin-bottom: 14px;">✉️</div>
+                            <div style="font-size: 24px; font-weight: 700; color: #edf2f9; margin-bottom: 8px;">Select an Email</div>
+                            <div>Choose a message from the inbox to inspect the analysis, sender, and body content.</div>
+                        </div>
+                    </div>
+                `;
+                return;
+            }
+
+            const isSafe = !email.is_spam;
+            const score = safePercentage(email).toFixed(1);
+            const bannerClass = isSafe ? '' : 'threat';
+            const bannerTitle = isSafe
+                ? `✅ Safety Analysis: ${score}% Secure`
+                : `⚠️ Threat Analysis: ${score}% Risk`;
+            const bannerCopy = isSafe
+                ? 'This email passed all security scans and appears to be legitimate business communication.'
+                : 'This email triggered the threat engine and should be treated as suspicious until reviewed.';
+            const actionButton = isSafe
+                ? `<button class="primary-action" onclick="sendFeedback(0)">✅ Mark Safe</button>`
+                : `<button class="danger-action" onclick="deleteSelectedEmail()">🗑️ Delete Threat</button>`;
+
+            readingPane.innerHTML = `
+                <div class="analysis-banner ${bannerClass}">
+                    <div class="analysis-title">${bannerTitle}</div>
+                    <div class="analysis-copy">${bannerCopy}</div>
+                </div>
+
+                <div class="meta-label">Message ID</div>
+                <div class="meta-value">${escapeHtml(email.id)}</div>
+
+                <div class="detail-title">${escapeHtml(email.subject)}</div>
+
+                <div class="from-row">
+                    <div class="meta-label">From</div>
+                    <div class="meta-value" style="margin-bottom: 0;">${escapeHtml(getSenderDisplay(email.sender))}</div>
+                </div>
+
+                <div class="divider"></div>
+
+                <div class="body-label">Message Content</div>
+                <div class="body-panel">${escapeHtml(email.body_text || 'No message body available.')}</div>
+
+                <div class="divider"></div>
+
+                <div class="detail-actions">${actionButton}</div>
+            `;
+        }
+
+        window.selectEmail = selectEmail;
+        window.deleteSelectedEmail = deleteSelectedEmail;
+        window.sendFeedback = sendFeedback;
+
+        syncInbox();
+    </script>
+</body>
+</html>

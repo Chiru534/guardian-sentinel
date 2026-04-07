@@ -1,0 +1,385 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guardian Sentinel | AI Email Security</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'cyber-dark': '#0a0a0c',
+                        'cyber-blue': '#00f2ff',
+                        'cyber-red': '#ff004c'
+                    }
+                }
+            }
+        }
+    </script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-pbvp7Jn4N1Xx8+Q3Dh1o9/RfSTRkMkkP0H9m4uPfP1eN+Jk0Fv2XnnNHtR8mjlEYZcZiZx6mK3F6JpmQNUTv9A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            min-height: 100%;
+        }
+
+        body {
+            background: #050608;
+            color: #e5e7eb;
+            font-family: Inter, system-ui, sans-serif;
+            overflow: hidden;
+        }
+
+        .panel-scroll {
+            overflow-y: auto;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0e1726;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #00f2ff66, #0ea5e9cc);
+            border-radius: 999px;
+        }
+
+        .email-card {
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            background: rgba(15, 23, 42, 0.82);
+            transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+
+        .email-card:hover {
+            transform: translateX(2px);
+            box-shadow: 0 16px 40px rgba(0, 242, 255, 0.12);
+        }
+
+        .email-card.active {
+            border-color: rgba(0, 242, 255, 0.8);
+            box-shadow: 0 0 30px rgba(0, 242, 255, 0.25);
+        }
+
+        .email-chip {
+            border-radius: 999px;
+            padding: 0.45rem 0.85rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .email-body-content {
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+            line-height: 1.75;
+            color: #d1d5db;
+        }
+
+        .reading-grid {
+            display: grid;
+            gap: 1rem;
+            grid-template-columns: minmax(0, 1fr);
+        }
+    </style>
+</head>
+<body>
+    <div class="flex h-screen text-slate-100">
+        <aside class="w-80 bg-slate-950/95 border-r border-cyber-blue/20 p-6 flex flex-col gap-6 panel-scroll custom-scrollbar">
+            <div>
+                <div class="text-cyber-blue text-3xl font-semibold mb-2">Guardian Sentinel</div>
+                <p class="text-slate-400 text-sm">AI email security command center with live threat insights.</p>
+            </div>
+
+            <button id="syncBtn" class="w-full rounded-2xl bg-cyber-blue text-cyber-dark font-semibold py-3 shadow-lg shadow-cyber-blue/20 hover:bg-cyber-blue/90 transition">
+                <i class="fas fa-sync-alt mr-2"></i>Sync Live Inbox
+            </button>
+
+            <div class="rounded-3xl border border-slate-800/80 bg-slate-900/80 p-4 space-y-4">
+                <div class="text-slate-400 uppercase tracking-[0.25em] text-[10px]">Overview</div>
+                <div class="grid gap-3">
+                    <div class="rounded-2xl bg-slate-950/90 p-4">
+                        <div class="text-slate-400 text-xs">Total Emails</div>
+                        <div id="totalCount" class="text-3xl font-semibold text-white">0</div>
+                    </div>
+                    <div class="rounded-2xl bg-slate-950/90 p-4">
+                        <div class="text-slate-400 text-xs">Safe</div>
+                        <div id="safeCount" class="text-3xl font-semibold text-emerald-400">0</div>
+                    </div>
+                    <div class="rounded-2xl bg-slate-950/90 p-4">
+                        <div class="text-slate-400 text-xs">Threats</div>
+                        <div id="threatCount" class="text-3xl font-semibold text-rose-400">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="rounded-3xl border border-slate-800/80 bg-slate-900/80 p-4 text-slate-400 text-sm space-y-3">
+                <div class="font-semibold text-slate-100">Live Backend</div>
+                <p class="break-words">http://localhost:8000</p>
+                <p class="text-slate-500">Sync inbox, analyze threats, and delete malicious email safely.</p>
+            </div>
+        </aside>
+
+        <main class="w-[38rem] bg-slate-950/90 border-r border-cyber-blue/15 p-6 flex flex-col gap-5">
+            <div class="flex items-center justify-between gap-4">
+                <div>
+                    <div class="text-slate-200 text-lg font-semibold">Inbox</div>
+                    <p class="text-slate-500 text-sm">Browse messages by safety status.</p>
+                </div>
+                <div class="inline-flex rounded-full border border-slate-800/90 bg-slate-900/90 p-1">
+                    <button id="safeTab" class="rounded-full px-4 py-2 bg-cyber-blue/10 text-cyber-blue font-semibold">Safe</button>
+                    <button id="threatTab" class="rounded-full px-4 py-2 text-slate-300 hover:text-white">Threats</button>
+                </div>
+            </div>
+
+            <div id="emailList" class="space-y-3 overflow-y-auto panel-scroll custom-scrollbar">
+                <div class="rounded-3xl border border-slate-800/80 bg-slate-900/80 p-8 text-slate-500 text-center">
+                    Waiting for sync... click the button above.</div>
+            </div>
+        </main>
+
+        <section class="flex-1 p-6 panel-scroll custom-scrollbar">
+            <div id="readingPane" class="h-full rounded-[32px] border border-slate-800/80 bg-slate-950/85 p-6 shadow-[0_20px_80px_rgba(0,0,0,0.35)]">
+                <div class="h-full flex flex-col items-center justify-center text-center text-slate-500">
+                    <i class="fas fa-envelope-open-text text-6xl mb-5 text-cyber-blue"></i>
+                    <h1 class="text-2xl font-semibold mb-3">Guardian Sentinel</h1>
+                    <p class="max-w-xl text-sm">Select a message from the inbox to inspect its content, threat score, and BEC indicators.</p>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8000';
+        let emails = [];
+        let currentView = 'safe';
+        let selectedEmailId = null;
+
+        const safeTab = document.getElementById('safeTab');
+        const threatTab = document.getElementById('threatTab');
+
+        safeTab.addEventListener('click', () => switchView('safe'));
+        threatTab.addEventListener('click', () => switchView('threat'));
+        document.getElementById('syncBtn').addEventListener('click', syncInbox);
+
+        function escapeHtml(value) {
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        async function fetchInbox() {
+            const response = await fetch(`${API_BASE_URL}/sync-inbox`);
+            if (!response.ok) throw new Error('Failed to load inbox');
+            return await response.json();
+        }
+
+        async function syncInbox() {
+            const button = document.getElementById('syncBtn');
+            button.disabled = true;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Syncing...';
+
+            try {
+                emails = await fetchInbox();
+                selectedEmailId = null;
+                updateStats();
+                renderEmailList();
+                renderReadingPane();
+            } catch (error) {
+                console.error(error);
+                renderMessage('readingPane', 'Unable to sync inbox. Please check backend connectivity.');
+            } finally {
+                button.disabled = false;
+                button.innerHTML = '<i class="fas fa-sync-alt mr-2"></i>Sync Live Inbox';
+            }
+        }
+
+        function renderMessage(id, message) {
+            const pane = document.getElementById(id);
+            pane.innerHTML = `<div class="h-full flex items-center justify-center text-center text-slate-400"><div class="max-w-lg text-sm">${escapeHtml(message)}</div></div>`;
+        }
+
+        function updateStats() {
+            document.getElementById('totalCount').textContent = emails.length;
+            document.getElementById('safeCount').textContent = emails.filter(email => !email.is_spam).length;
+            document.getElementById('threatCount').textContent = emails.filter(email => email.is_spam).length;
+        }
+
+        function switchView(view) {
+            currentView = view;
+            safeTab.classList.toggle('bg-cyber-blue/10', view === 'safe');
+            safeTab.classList.toggle('text-cyber-blue', view === 'safe');
+            safeTab.classList.toggle('text-slate-300', view !== 'safe');
+            threatTab.classList.toggle('bg-cyber-blue/10', view === 'threat');
+            threatTab.classList.toggle('text-cyber-blue', view === 'threat');
+            threatTab.classList.toggle('text-slate-300', view !== 'threat');
+            renderEmailList();
+        }
+
+        function formatPreview(text) {
+            if (!text) return 'No preview available';
+            const cleaned = text.replace(/\s+/g, ' ').trim();
+            return escapeHtml(cleaned.slice(0, 90)) + (cleaned.length > 90 ? '...' : '');
+        }
+
+        function renderEmailList() {
+            const container = document.getElementById('emailList');
+            const filtered = emails.filter(email => currentView === 'safe' ? !email.is_spam : email.is_spam);
+
+            if (!filtered.length) {
+                container.innerHTML = `<div class="rounded-3xl border border-slate-800/80 bg-slate-900/80 p-8 text-slate-500 text-center">No ${currentView === 'safe' ? 'safe' : 'threat'} emails available.</div>`;
+                return;
+            }
+
+            container.innerHTML = filtered.map(email => {
+                const activeClass = selectedEmailId === email.id ? 'active' : '';
+                const statusColor = email.is_spam ? 'text-rose-400' : 'text-emerald-400';
+                return `
+                    <div class="email-card ${activeClass} ${email.is_spam ? 'threat' : 'safe'} rounded-3xl p-4 cursor-pointer" data-email-id="${escapeHtml(email.id)}">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <div class="text-slate-400 text-sm">${escapeHtml(email.sender || 'Unknown sender')}</div>
+                                <div class="text-base font-semibold text-white mt-1">${escapeHtml(email.subject || 'No subject')}</div>
+                            </div>
+                            <div class="text-xs font-semibold ${statusColor} uppercase tracking-[0.18em]">${email.is_spam ? 'Threat' : 'Safe'}</div>
+                        </div>
+                        <div class="mt-3 text-slate-400 text-sm">${formatPreview(email.body_text)}</div>
+                        <div class="mt-4 flex items-center justify-between text-xs text-slate-500">
+                            <span>${escapeHtml(email.date || email.received_at || '')}</span>
+                            <span>Confidence ${(email.confidence * 100).toFixed(1)}%</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            container.querySelectorAll('.email-card').forEach(card => {
+                card.addEventListener('click', () => selectEmail(card.dataset.emailId));
+            });
+        }
+
+        function selectEmail(id) {
+            selectedEmailId = id;
+            renderEmailList();
+            renderReadingPane();
+        }
+
+        function stripHtml(html) {
+            return String(html).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        function renderReadingPane() {
+            const pane = document.getElementById('readingPane');
+            if (!selectedEmailId) {
+                pane.innerHTML = `
+                    <div class="h-full flex flex-col items-center justify-center text-center text-slate-500">
+                        <i class="fas fa-envelope-open-text text-6xl mb-5 text-cyber-blue"></i>
+                        <div class="text-2xl font-semibold mb-3">Ready for inspection</div>
+                        <div class="max-w-md text-sm">Choose a message to reveal its threat score, BEC indicators, and deletion controls.</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const email = emails.find(item => item.id === selectedEmailId);
+            if (!email) {
+                selectedEmailId = null;
+                return renderReadingPane();
+            }
+
+            const isSpam = email.is_spam;
+            const scoreValue = isSpam ? (email.confidence * 100).toFixed(1) : ((1 - email.confidence) * 100).toFixed(1);
+            const scoreLabel = isSpam ? 'Threat Probability' : 'Safety Rating';
+            const statusText = isSpam ? 'Threat Detected' : 'Verified Safe';
+            const scoreClass = isSpam ? 'text-rose-200' : 'text-emerald-200';
+            const becHtml = Array.isArray(email.bec_flags) && email.bec_flags.length
+                ? email.bec_flags.map(flag => `<span class="email-chip bg-cyber-red/10 text-cyber-red border border-cyber-red/25">${escapeHtml(flag)}</span>`).join(' ')
+                : '<span class="email-chip bg-slate-700 text-slate-200 border border-slate-700/80">No BEC flags</span>';
+            const bodyText = email.body_text || stripHtml(email.body_html || 'No body available');
+            const bodyHtml = `<div class="email-body-content">${escapeHtml(bodyText)}</div>`;
+
+            pane.innerHTML = `
+                <div class="flex flex-col h-full gap-6">
+                    <div class="flex flex-col gap-4 rounded-[28px] border border-slate-800/90 bg-slate-900/95 p-6 shadow-xl shadow-cyber-blue/10">
+                        <div class="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <div class="text-slate-400 text-sm uppercase tracking-[0.25em]">${escapeHtml(statusText)}</div>
+                                <div class="text-3xl font-semibold text-white mt-2">${escapeHtml(email.subject || 'No subject')}</div>
+                                <div class="text-slate-400 mt-2 text-sm">From <span class="text-white">${escapeHtml(email.sender || 'Unknown sender')}</span> • ${escapeHtml(email.date || email.received_at || 'Unknown date')}</div>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                <button onclick="deleteSelectedEmail()" class="rounded-full bg-rose-500/15 px-4 py-2 text-rose-100 hover:bg-rose-500/25 transition">Neutralize & Delete</button>
+                                <button onclick="markSafe()" class="rounded-full bg-cyber-blue/15 px-4 py-2 text-cyber-blue hover:bg-cyber-blue/25 transition">Mark Feedback</button>
+                            </div>
+                        </div>
+
+                        <div class="rounded-3xl border border-slate-800/80 bg-slate-950/90 p-5 grid gap-4 md:grid-cols-2">
+                            <div class="rounded-2xl border border-slate-800/70 bg-slate-900/90 p-4">
+                                <div class="text-slate-400 text-xs uppercase tracking-[0.2em] mb-2">Score</div>
+                                <div class="text-3xl font-semibold ${scoreClass}">${scoreValue}%</div>
+                                <div class="text-slate-500 text-xs mt-2">${escapeHtml(scoreLabel)}</div>
+                            </div>
+                            <div class="rounded-2xl border border-slate-800/70 bg-slate-900/90 p-4">
+                                <div class="text-slate-400 text-xs uppercase tracking-[0.2em] mb-2">BEC Flags</div>
+                                <div class="flex flex-wrap gap-2">${becHtml}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex-1 rounded-[28px] border border-slate-800/90 bg-slate-900/90 p-6 overflow-y-auto reading-grid">
+                        <div class="text-slate-400 text-xs uppercase tracking-[0.2em] mb-3">Message Body</div>
+                        ${bodyHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function markSafe() {
+            if (!selectedEmailId) return;
+            const email = emails.find(item => item.id === selectedEmailId);
+            if (!email) return;
+            alert(`Feedback recorded for ${email.subject || 'selected email'}.`);
+        }
+
+        async function deleteSelectedEmail() {
+            if (!selectedEmailId) return;
+            const email = emails.find(item => item.id === selectedEmailId);
+            if (!email) return;
+            if (!confirm('Delete this email from the backend?')) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/delete-email/${encodeURIComponent(email.id)}`, {
+                    method: 'POST'
+                });
+                if (!response.ok) throw new Error('Delete failed');
+                emails = emails.filter(item => item.id !== email.id);
+                selectedEmailId = null;
+                updateStats();
+                renderEmailList();
+                renderReadingPane();
+            } catch (error) {
+                console.error(error);
+                alert('Unable to delete the email.');
+            }
+        }
+
+        window.addEventListener('load', () => {
+            syncInbox();
+        });
+    </script>
+</body>
+</html>

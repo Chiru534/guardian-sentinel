@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data & Security (CRITICAL)
+code/token.json
+code/credentials.json
+code/processed_emails.csv
+code/user_feedback_log.csv
+code/.pytest_cache/
+
+# Large Datasets and Models
+code/spam_ham_dataset.csv
+code/BusinessEmail_train.csv
+code/BusinessEmail_test.csv
+code/bilstm_model.h5
+code/tokenizer.pickle
+code/ann_model.h5
+code/rnn_model.h5
+
+# Frontend dependencies
+guardian-ui/node_modules/
+guardian-ui/dist/
+guardian-ui/dist-ssr/
+guardian-ui/*.local
+
+# Playwright MCP
+.playwright-mcp/
+
+# OS files
+.DS_Store
+Thumbs.db
