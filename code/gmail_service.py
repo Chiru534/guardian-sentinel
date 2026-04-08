@@ -1,6 +1,6 @@
 import os.path
 import base64
-import re
+import socket
 from bs4 import BeautifulSoup
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -14,8 +14,17 @@ from googleapiclient.errors import HttpError
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 CREDENTIALS_FILE = 'credentials.json'
 TOKEN_FILE = 'token.json'
+SYNC_SCOPE_VALUES = (
+    'read',
+    'unread',
+    'inbox',
+    'sent',
+    'archived',
+    'trash_spam',
+    'all',
+)
 
-def authenticate_gmail():
+def authenticate_gmail(allow_interactive=True):
     """
     [Phase 1 Authentication] 
     Handles OAuth2 flow, token storage, and automatic refreshing.
@@ -25,26 +34,65 @@ def authenticate_gmail():
     # The file token.json stores the user's access and refresh tokens.
     if os.path.exists(TOKEN_FILE):
         creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
-    
+
+    token_was_updated = False
+
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            print("[LOG] Refreshing expired Gmail API token...")
-            creds.refresh(Request())
-        else:
+            try:
+                print("[LOG] Refreshing expired Gmail API token...")
+                creds.refresh(Request())
+                token_was_updated = True
+            except Exception as refresh_error:
+                print(f"[WARNING] Token refresh failed: {refresh_error}")
+                creds = None
+
+        if not creds or not creds.valid:
+            if not allow_interactive:
+                raise RuntimeError(
+                    "Gmail authorization requires an interactive login. "
+                    "Run the backend once in an interactive terminal to complete OAuth."
+                )
+
             if not os.path.exists(CREDENTIALS_FILE):
                 raise FileNotFoundError(f"CRITICAL: '{CREDENTIALS_FILE}' not found. Download it from Google Cloud Console.")
-            
+
             print("[LOG] Starting new OAuth2 Authentication Flow...")
             flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-            creds = flow.run_local_server(port=0)
-            
-        # Save the credentials for the next run
+            try:
+                creds = flow.run_local_server(port=0)
+            except OSError as local_server_error:
+                if getattr(local_server_error, "winerror", None) == 10013 or isinstance(local_server_error, socket.error):
+                    print("[WARNING] Local OAuth callback server failed. Falling back to manual console auth.")
+                    if not hasattr(flow, "run_console"):
+                        raise RuntimeError(
+                            "Local OAuth callback server could not start and console authentication is unavailable in this library version."
+                        ) from local_server_error
+                    creds = flow.run_console(
+                        authorization_prompt_message=(
+                            "Open this URL in your browser, authorize Gmail access, then paste the verification code here:\n{url}\n"
+                        ),
+                        authorization_code_message="Enter the authorization code: ",
+                    )
+                else:
+                    raise
+            token_was_updated = True
+
+    if creds and (token_was_updated or not os.path.exists(TOKEN_FILE)):
         with open(TOKEN_FILE, 'w') as token:
             token.write(creds.to_json())
             print(f"[SUCCESS] Token saved to {TOKEN_FILE}")
 
     return build('gmail', 'v1', credentials=creds)
+
+def get_gmail_profile(service):
+    """Return the connected Gmail profile metadata."""
+    try:
+        return service.users().getProfile(userId='me').execute()
+    except HttpError as error:
+        print(f"[ERROR] Unable to fetch Gmail profile: {error}")
+        return None
 
 def clean_html_for_ai(html_content):
     """
@@ -112,39 +160,100 @@ def extract_body_dual(service, message_id, payload):
     traverse(payload)
     return result
 
-def fetch_unread_emails(service, max_results=20):
+def _get_scope_requests(scope):
+    if scope == 'read':
+        return [{"query": "-label:UNREAD"}]
+    if scope == 'unread':
+        return [{"label_ids": ["UNREAD"]}]
+    if scope == 'inbox':
+        return [{"label_ids": ["INBOX"]}]
+    if scope == 'sent':
+        return [{"label_ids": ["SENT"]}]
+    if scope == 'archived':
+        return [{"query": "-label:INBOX -label:SENT -label:SPAM -label:TRASH -label:DRAFT"}]
+    if scope == 'trash_spam':
+        return [{"label_ids": ["TRASH"]}, {"label_ids": ["SPAM"]}]
+    if scope == 'all':
+        return [{}]
+    raise ValueError(f"Unsupported sync scope: {scope}")
+
+def _list_message_refs(service, label_ids=None, query=None, limit=None):
+    refs = []
+    seen_ids = set()
+    page_token = None
+
+    while True:
+        request_args = {
+            "userId": "me",
+            "maxResults": 500,
+        }
+        if label_ids:
+            request_args["labelIds"] = label_ids
+        if query:
+            request_args["q"] = query
+        if page_token:
+            request_args["pageToken"] = page_token
+
+        results = service.users().messages().list(**request_args).execute()
+        for message in results.get('messages', []):
+            message_id = message.get('id')
+            if not message_id or message_id in seen_ids:
+                continue
+
+            seen_ids.add(message_id)
+            refs.append({"id": message_id})
+            if limit is not None and len(refs) >= limit:
+                return refs
+
+        page_token = results.get('nextPageToken')
+        if not page_token:
+            break
+
+    return refs
+
+def fetch_emails(service, scope='unread', limit=None):
     """
-    [Targeted Fetching] 
-    Interface with Gmail API to retrieve unread inbox messages.
+    Fetch Gmail messages for the selected mailbox scope.
     """
     try:
-        results = service.users().messages().list(
-            userId='me', 
-            labelIds=['INBOX', 'UNREAD'], 
-            maxResults=max_results
-        ).execute()
-        
-        messages = results.get('messages', [])
-        email_data = []
+        message_refs = []
+        seen_ids = set()
 
-        if not messages:
-            print("[LOG] No new unread emails found.")
+        for request in _get_scope_requests(scope):
+            refs = _list_message_refs(
+                service,
+                label_ids=request.get("label_ids"),
+                query=request.get("query"),
+                limit=None if limit is None else max(limit - len(message_refs), 0),
+            )
+            for ref in refs:
+                if ref['id'] in seen_ids:
+                    continue
+
+                seen_ids.add(ref['id'])
+                message_refs.append(ref)
+                if limit is not None and len(message_refs) >= limit:
+                    break
+
+            if limit is not None and len(message_refs) >= limit:
+                break
+
+        if not message_refs:
+            print(f"[LOG] No Gmail messages found for scope '{scope}'.")
             return []
 
-        print(f"[LOG] Fetching content for {len(messages)} messages...")
+        print(f"[LOG] Fetching content for {len(message_refs)} messages from scope '{scope}'...")
+        email_data = []
 
-        for msg in messages:
+        for msg in message_refs:
             full_msg = service.users().messages().get(userId='me', id=msg['id']).execute()
-            payload = full_msg.get('payload')
-            headers = payload.get('headers')
+            payload = full_msg.get('payload', {})
+            headers = payload.get('headers', [])
             date_sent = next((h['value'] for h in headers if h['name'].lower() == 'date'), "")
-
             subject = next((h['value'] for h in headers if h['name'].lower() == 'subject'), "No Subject")
             sender = next((h['value'] for h in headers if h['name'].lower() == 'from'), "Unknown Sender")
 
-            # Extract both formats
             dual_body = extract_body_dual(service, msg['id'], payload)
-
             email_data.append({
                 "id": msg['id'],
                 "sender": sender,
@@ -155,10 +264,16 @@ def fetch_unread_emails(service, max_results=20):
             })
 
         return email_data
-
     except HttpError as error:
         print(f"[ERROR] An API error occurred: {error}")
         return []
+
+def fetch_unread_emails(service, max_results=20):
+    """
+    [Targeted Fetching] 
+    Interface with Gmail API to retrieve unread inbox messages.
+    """
+    return fetch_emails(service, scope='unread', limit=max_results)
 
 def trash_email(service, user_id='me', msg_id=None):
     """Moves email to Trash."""

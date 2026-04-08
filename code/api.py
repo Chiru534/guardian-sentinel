@@ -1,16 +1,12 @@
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import RedirectResponse, FileResponse
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import pickle
-import numpy as np
 import os
 import csv
-import shutil
-import subprocess
 from data_pipeline import DataPreprocessor
 import json
 from datetime import datetime
@@ -81,6 +77,24 @@ except ImportError as e:
 MODEL_PATH = "bilstm_model.h5"
 TOKENIZER_PATH = "tokenizer.pickle"
 MAX_LENGTH = 50
+VALID_SYNC_SCOPES = {
+    "read",
+    "unread",
+    "inbox",
+    "sent",
+    "archived",
+    "trash_spam",
+    "all",
+}
+SYNC_SCOPE_LIMITS = {
+    "read": 100,
+    "unread": 100,
+    "inbox": 100,
+    "sent": 100,
+    "archived": 75,
+    "trash_spam": 50,
+    "all": 150,
+}
 
 app = FastAPI(title="Guardian Sentinel Engine", version="1.2")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -100,6 +114,45 @@ class PredictionResponse(BaseModel):
 class FeedbackRequest(BaseModel):
     email_text: str
     correct_label: int
+
+class SyncRequest(BaseModel):
+    scope: str = "unread"
+
+def build_processed_email(email, existing=None):
+    """Normalize Gmail payload into the persisted project email shape."""
+    if existing and {"is_spam", "confidence", "bec_flags"}.issubset(existing.keys()):
+        return {
+            "id": email['id'],
+            "sender": email['sender'],
+            "subject": email['subject'],
+            "body_text": email['body_text'],
+            "body_html": email.get('body_html', ""),
+            "is_spam": bool(existing["is_spam"]),
+            "confidence": float(existing["confidence"]),
+            "bec_flags": existing.get("bec_flags", {}),
+            "date": email.get('date', ''),
+            "processed_at": existing.get('processed_at', datetime.now().isoformat())
+        }, False
+
+    body_for_model = email.get('body_text') or email.get('subject', '')
+    bec_flags = preprocessor.engineer_bec_features(body_for_model)
+    cleaned = preprocessor.preprocess(body_for_model)
+    seq = tokenizer.texts_to_sequences([cleaned])
+    padded = pad_sequences(seq, maxlen=MAX_LENGTH, padding='post')
+    score = float(model.predict(padded, verbose=0)[0][0])
+
+    return {
+        "id": email['id'],
+        "sender": email['sender'],
+        "subject": email['subject'],
+        "body_text": email['body_text'],
+        "body_html": email.get('body_html', ""),
+        "is_spam": score > 0.5,
+        "confidence": score,
+        "bec_flags": bec_flags,
+        "date": email.get('date', ''),
+        "processed_at": datetime.now().isoformat()
+    }, True
 
 @app.on_event("startup")
 def load_artifacts():
@@ -121,7 +174,39 @@ def cleanup():
 
 @app.get("/")
 def serve_frontend():
+    # Try to serve production build if exists, otherwise fallback to local index.html
+    if os.path.exists("../guardian-ui/dist/index.html"):
+        return FileResponse("../guardian-ui/dist/index.html")
     return FileResponse("index.html")
+
+@app.get("/emails")
+async def get_cached_emails():
+    """High-speed endpoint to return already processed emails without Gmail sync."""
+    global processed_emails
+    return processed_emails
+
+@app.post("/cache/reset")
+async def reset_cached_emails():
+    global processed_emails
+    processed_emails = []
+    save_processed_emails(processed_emails)
+    return {"status": "cleared"}
+
+@app.get("/gmail-profile")
+async def get_gmail_profile():
+    if not GMAIL_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Gmail integration is unavailable.")
+    try:
+        gmail_svc = gmail_service.authenticate_gmail(allow_interactive=False)
+        profile = gmail_service.get_gmail_profile(gmail_svc)
+        if not profile:
+            raise HTTPException(status_code=503, detail="Unable to load Gmail profile.")
+        return {"connected": bool(profile), "profile": profile}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"[PROFILE ERROR] {e}")
+        raise HTTPException(status_code=503, detail=f"Gmail profile lookup failed: {e}")
 
 @app.post("/predict", response_model=PredictionResponse)
 async def predict_email(request: PredictionRequest):
@@ -136,67 +221,59 @@ async def predict_email(request: PredictionRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/sync-inbox")
-async def sync_live_inbox():
+@app.post("/sync-inbox")
+async def sync_live_inbox(request: SyncRequest):
     global processed_emails
-    if not GMAIL_AVAILABLE: return processed_emails
+    scope = request.scope.strip().lower()
+    if scope not in VALID_SYNC_SCOPES:
+        raise HTTPException(status_code=400, detail=f"Unsupported sync scope '{scope}'")
+    if not GMAIL_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Gmail integration is unavailable.")
     try:
-        gmail_svc = gmail_service.authenticate_gmail()
+        gmail_svc = gmail_service.authenticate_gmail(allow_interactive=False)
+        profile = gmail_service.get_gmail_profile(gmail_svc)
+        if not profile:
+            raise HTTPException(status_code=503, detail="Unable to load Gmail profile.")
         processed_by_id = {email['id']: email for email in processed_emails}
-        emails = gmail_service.fetch_unread_emails(gmail_svc, max_results=20)
-        
-        new_processed = []
+        emails = gmail_service.fetch_emails(gmail_svc, scope=scope, limit=SYNC_SCOPE_LIMITS[scope])
+
+        synced_emails = []
+        analyzed_count = 0
+        reused_count = 0
         for email in emails:
-            existing = processed_by_id.get(email['id'])
-            should_refresh_existing = bool(existing) and (
-                not existing.get('body_html') or
-                not existing.get('body_text')
-            )
-            if existing and not should_refresh_existing:
-                continue
-            
-            # Predict using plaintext
-            bec_flags = preprocessor.engineer_bec_features(email['body_text'])
-            cleaned = preprocessor.preprocess(email['body_text'])
-            seq = tokenizer.texts_to_sequences([cleaned])
-            padded = pad_sequences(seq, maxlen=MAX_LENGTH, padding='post')
-            score = float(model.predict(padded, verbose=0)[0][0])
-            
-            # Save DUAL format (text for model/search, HTML for premium display)
-            processed_email = {
-                "id": email['id'],
-                "sender": email['sender'],
-                "subject": email['subject'],
-                "body_text": email['body_text'],
-                "body_html": email.get('body_html', ""),
-                "is_spam": score > 0.5,
-                "confidence": score,
-                "bec_flags": bec_flags,
-                "date": email.get('date', ''),
-                "processed_at": datetime.now().isoformat()
-            }
-
-            if existing:
-                processed_emails = [e for e in processed_emails if e['id'] != email['id']]
+            processed_email, analyzed = build_processed_email(email, processed_by_id.get(email['id']))
+            synced_emails.append(processed_email)
+            if analyzed:
+                analyzed_count += 1
             else:
-                new_processed.append(processed_email)
+                reused_count += 1
 
-            processed_emails.append(processed_email)
-            processed_by_id[email['id']] = processed_email
-
-        if new_processed or any(not e.get('body_html') for e in processed_emails):
-            save_processed_emails(processed_emails)
-        return processed_emails
+        synced_ids = {email['id'] for email in synced_emails}
+        removed_count = sum(1 for email in processed_emails if email['id'] not in synced_ids)
+        processed_emails = synced_emails
+        save_processed_emails(processed_emails)
+        return {
+            "emails": processed_emails,
+            "scope": scope,
+            "project_count": len(processed_emails),
+            "fetched_count": len(emails),
+            "removed_count": removed_count,
+            "analyzed_count": analyzed_count,
+            "reused_count": reused_count,
+            "profile": profile,
+        }
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"[SYNC ERROR] {e}")
-        return processed_emails
+        raise HTTPException(status_code=503, detail=f"Gmail sync failed: {e}")
 
 @app.post("/delete-email/{email_id}")
 async def delete_threat_email(email_id: str):
     global processed_emails
     if not GMAIL_AVAILABLE: raise HTTPException(status_code=503, detail="Offline")
     try:
-        service = gmail_service.authenticate_gmail()
+        service = gmail_service.authenticate_gmail(allow_interactive=False)
         if gmail_service.trash_email(service, msg_id=email_id):
             processed_emails = [e for e in processed_emails if e['id'] != email_id]
             save_processed_emails(processed_emails)
