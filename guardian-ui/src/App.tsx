@@ -11,7 +11,6 @@ import {
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
 } from 'recharts'
 import EmailDetail from './components/EmailDetail'
 import {
@@ -708,48 +707,43 @@ const App = () => {
             </div>
           ) : (
             <section className="overview-panel">
-              <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="overview-header">
                 <div>
-                  <p className="text-sm uppercase tracking-[0.22em] text-cyan-300/80">Mailbox Overview</p>
-                  <h2 className="mt-2 text-2xl font-semibold text-white">Threat telemetry from your current project queue</h2>
+                  <p className="overview-eyebrow">Mailbox Overview</p>
+                  <h2 className="overview-heading">Threat telemetry from your current project queue</h2>
                 </div>
-                <button
-                  type="button"
-                  onClick={exportThreatReport}
-                  className="rounded-full border border-rose-500/40 bg-rose-500/10 px-4 py-2 text-sm font-semibold text-rose-100 transition hover:bg-rose-500/20"
-                >
+                <button type="button" onClick={exportThreatReport} className="overview-export-button">
                   Export Threat CSV
                 </button>
               </div>
 
               {emails.length === 0 ? (
-                <div className="mt-6 rounded-2xl border border-cyan-500/20 bg-slate-950/30 px-6 py-12 text-center">
-                  <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-300">
+                <div className="overview-empty-state">
+                  <div className="overview-empty-icon">
                     <Shield size={28} />
                   </div>
-                  <h3 className="text-xl font-semibold text-white">No mailbox activity available yet.</h3>
-                  <p className="mt-2 text-sm text-slate-400">
-                    Run a sync to populate analytics for sender volume and threat distribution.
-                  </p>
+                  <h3>No mailbox activity available yet.</h3>
+                  <p>Run a sync to populate analytics for sender volume and threat distribution.</p>
                 </div>
               ) : (
-                <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(320px,0.9fr)_minmax(0,1.1fr)]">
-                  <div className="rounded-2xl border border-cyan-500/20 bg-slate-950/40 p-5">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-white">Safe vs Threat Ratio</h3>
-                      <p className="mt-1 text-sm text-slate-400">
+                <div className="overview-grid">
+                  <div className="overview-card">
+                    <div className="overview-card-head">
+                      <h3>Safe vs Threat Ratio</h3>
+                      <p>
                         {hasThreats ? 'Threats are present in the current queue.' : 'All synced emails are currently marked safe.'}
                       </p>
                     </div>
-                    <div className="h-[320px]">
+                    <div className="overview-chart-shell">
                       <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                           <Pie
                             data={overviewPieData}
                             dataKey="value"
                             nameKey="name"
-                            innerRadius={70}
-                            outerRadius={110}
+                            innerRadius={60}
+                            outerRadius={80}
+                            stroke="none"
                             paddingAngle={4}
                             label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                           >
@@ -757,6 +751,7 @@ const App = () => {
                               <Cell
                                 key={entry.name}
                                 fill={entry.name === 'Safe' ? SAFE_CHART_COLOR : THREAT_CHART_COLOR}
+                                stroke="none"
                               />
                             ))}
                           </Pie>
@@ -773,15 +768,14 @@ const App = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-cyan-500/20 bg-slate-950/40 p-5">
-                    <div className="mb-4">
-                      <h3 className="text-lg font-semibold text-white">Top Senders</h3>
-                      <p className="mt-1 text-sm text-slate-400">The four most active senders in the current project queue.</p>
+                  <div className="overview-card">
+                    <div className="overview-card-head">
+                      <h3>Top Senders</h3>
+                      <p>The four most active senders in the current project queue.</p>
                     </div>
-                    <div className="h-[320px]">
+                    <div className="overview-chart-shell">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={topSendersData} margin={{ top: 8, right: 16, left: 0, bottom: 8 }}>
-                          <CartesianGrid stroke="rgba(148, 163, 184, 0.15)" strokeDasharray="3 3" />
                           <XAxis dataKey="sender" stroke="#94a3b8" tickLine={false} axisLine={false} interval={0} angle={-12} textAnchor="end" height={60} />
                           <YAxis stroke="#94a3b8" tickLine={false} axisLine={false} allowDecimals={false} />
                           <Tooltip

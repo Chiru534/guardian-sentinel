@@ -379,6 +379,120 @@ button {
   border-radius: 14px;
 }
 
+.overview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.overview-eyebrow {
+  margin: 0;
+  color: rgba(8, 212, 255, 0.78);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.overview-heading {
+  margin: 8px 0 0;
+  color: var(--text);
+  font-size: 34px;
+  line-height: 1.2;
+}
+
+.overview-export-button {
+  border: 1px solid rgba(255, 85, 112, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 85, 112, 0.08);
+  color: #ffe8ed;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.16s ease, transform 0.16s ease;
+}
+
+.overview-export-button:hover {
+  background: rgba(255, 85, 112, 0.16);
+  transform: translateY(-1px);
+}
+
+.overview-grid {
+  display: grid;
+  gap: 24px;
+  margin-top: 24px;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  align-items: start;
+}
+
+.overview-card {
+  min-width: 0;
+  border: 1px solid rgba(8, 212, 255, 0.16);
+  border-radius: 16px;
+  background: rgba(2, 8, 23, 0.42);
+  padding: 20px;
+}
+
+.overview-card-head {
+  margin-bottom: 16px;
+}
+
+.overview-card-head h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 20px;
+}
+
+.overview-card-head p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.overview-chart-shell {
+  height: 320px;
+  min-height: 320px;
+  width: 100%;
+}
+
+.overview-empty-state {
+  margin-top: 24px;
+  border: 1px solid rgba(8, 212, 255, 0.16);
+  border-radius: 16px;
+  background: rgba(2, 8, 23, 0.32);
+  padding: 48px 24px;
+  text-align: center;
+}
+
+.overview-empty-icon {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  border: 1px solid rgba(8, 212, 255, 0.22);
+  background: rgba(8, 212, 255, 0.08);
+  color: var(--cyan);
+}
+
+.overview-empty-state h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 22px;
+}
+
+.overview-empty-state p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
 .tab-header {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -827,5 +941,13 @@ button {
 
   .panel-toggle-button {
     flex: 1 1 0;
+  }
+
+  .overview-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-heading {
+    font-size: 28px;
   }
 }
