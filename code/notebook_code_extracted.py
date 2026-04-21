@@ -1,17 +1,11 @@
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.layers import Embedding, LSTM, Bidirectional, Dense, Dropout, BatchNormalization
-from tensorflow.keras.models import Sequential
+from keras._tf_keras.keras.callbacks import EarlyStopping
+from keras._tf_keras.keras.layers import BatchNormalization, Bidirectional, Dense, Dropout, Embedding, LSTM, Reshape, SimpleRNN
+from keras._tf_keras.keras.models import Sequential
+from keras._tf_keras.keras.optimizers import Adam
+from keras._tf_keras.keras.preprocessing.text import Tokenizer
+from keras._tf_keras.keras.utils import pad_sequences
 from sklearn.metrics import accuracy_score
-from tensorflow.keras.layers import Embedding, LSTM  # Import LSTM here
-from keras.layers import SimpleRNN, Reshape
 from sklearn.metrics import confusion_matrix
-from tensorflow.keras.callbacks import EarlyStopping
-from keras.layers import Dense, Dropout
-from keras.models import Sequential
-import keras
-from keras.preprocessing.sequence import pad_sequences
-# Import Tokenizer from tensorflow.keras.preprocessing.text
-from tensorflow.keras.preprocessing.text import Tokenizer
 from nltk.stem.snowball import SnowballStemmer
 from wordcloud import WordCloud
 from sklearn.preprocessing import LabelEncoder

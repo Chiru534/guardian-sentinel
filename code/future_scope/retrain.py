@@ -4,8 +4,8 @@ import sys
 # Ensure the parent directory (code/) is on the import path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from tensorflow.keras.optimizers import Adam
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+from keras.optimizers import Adam
+from keras.utils import pad_sequences
 from data_pipeline import DataPreprocessor
 import pandas as pd
 import numpy as np

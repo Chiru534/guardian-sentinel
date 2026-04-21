@@ -3,7 +3,7 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import tensorflow as tf
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+from keras.utils import pad_sequences
 import pickle
 import os
 import csv

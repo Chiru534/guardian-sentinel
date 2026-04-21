@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.metrics import classification_report, confusion_matrix
 import tensorflow as tf
+from keras.utils import pad_sequences
 import pickle
 import os
 from data_pipeline import DataPreprocessor, TextTokenizer
@@ -81,7 +82,7 @@ def run_comparative_evaluation():
 
     # Prepare sequences
     sequences = tokenizer_obj.texts_to_sequences(df['text'])
-    x_test = tf.keras.preprocessing.sequence.pad_sequences(
+    x_test = pad_sequences(
         sequences, maxlen=MAX_LENGTH, padding='post')
     y_test = df['label'].values
 

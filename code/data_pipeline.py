@@ -2,8 +2,9 @@ import re
 import nltk
 from nltk.corpus import stopwords
 from nltk.stem.snowball import SnowballStemmer
-from tensorflow.keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.sequence import pad_sequences
+# Use the concrete Keras package paths so static analyzers can resolve them.
+from keras._tf_keras.keras.preprocessing.text import Tokenizer
+from keras._tf_keras.keras.utils import pad_sequences
 
 # Ensure necessary NLTK data is downloaded
 try:
