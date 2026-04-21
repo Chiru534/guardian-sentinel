@@ -30,7 +30,6 @@ guardian-ui/*.local
 
 # Logs and temporary data
 *.log
-*.json
 !guardian-ui/package.json
 !guardian-ui/tsconfig.json
 !guardian-ui/package-lock.json

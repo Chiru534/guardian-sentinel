@@ -127,7 +127,7 @@ print("Test Data size", len(x_test))
 
 # --- NEW CELL ---
 
-!pip install tensorflow-text
+# !pip install tensorflow-text
 
 # --- NEW CELL ---
 

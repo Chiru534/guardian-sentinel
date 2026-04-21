@@ -47,6 +47,10 @@ def authenticate_gmail(allow_interactive=True):
             except Exception as refresh_error:
                 print(f"[WARNING] Token refresh failed: {refresh_error}")
                 creds = None
+                # Auto-delete the stale token so the next restart triggers a clean OAuth flow
+                if os.path.exists(TOKEN_FILE):
+                    os.remove(TOKEN_FILE)
+                    print(f"[CLEANUP] Removed stale {TOKEN_FILE}. Restart the server to re-authenticate.")
 
         if not creds or not creds.valid:
             if not allow_interactive:

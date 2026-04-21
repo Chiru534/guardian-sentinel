@@ -65,11 +65,20 @@ def sync_inbox():
     """Fetches live Gmail streams through our Bi-LSTM + BEC Backend API."""
     with st.spinner("Synchronizing with Gmail API & running AI Scanning..."):
         try:
-            response = requests.get(f"{API_BASE_URL}/sync-inbox", timeout=30)
+            response = requests.post(
+                f"{API_BASE_URL}/sync-inbox",
+                json={"scope": "unread"},
+                timeout=60
+            )
             if response.status_code == 200:
-                st.session_state.emails = response.json()
+                data = response.json()
+                # Handle both legacy (list) and new (dict with 'emails' key) response formats
+                if isinstance(data, list):
+                    st.session_state.emails = data
+                else:
+                    st.session_state.emails = data.get("emails", [])
                 st.session_state.selected_email = None
-                st.success(f"Successfully synced {len(st.session_state.emails)} unread messages.")
+                st.success(f"Successfully synced {len(st.session_state.emails)} messages.")
             else:
                 st.error(f"Backend Retrieval Error: {response.text}")
         except Exception as e:

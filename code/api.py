@@ -285,8 +285,11 @@ async def delete_threat_email(email_id: str):
 @app.post("/feedback")
 async def log_feedback(request: FeedbackRequest):
     try:
+        file_exists = os.path.exists("user_feedback_log.csv")
         with open("user_feedback_log.csv", mode='a', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
+            if not file_exists:
+                writer.writerow(["text", "Label"])
             writer.writerow([request.email_text.replace('\n', ' '), request.correct_label])
         return {"status": "success"}
     except Exception as e:

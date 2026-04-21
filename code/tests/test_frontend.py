@@ -3,8 +3,8 @@ from playwright.sync_api import Page, expect
 
 def start_app_and_wait(page: Page):
     page.set_viewport_size({"width": 1280, "height": 1000})
-    page.goto("http://localhost:8501")
-    expect(page.get_by_text("🛡️ Guardian Sentinel")).to_be_visible(timeout=20000)
+    page.goto("http://localhost:5173")
+    expect(page.get_by_text("Guardian Sentinel")).to_be_visible(timeout=20000)
 
 def test_app_loads(page: Page):
     start_app_and_wait(page)

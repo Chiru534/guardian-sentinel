@@ -93,7 +93,7 @@ def run_comparative_evaluation():
             
             if name == "Bi-LSTM":
                 # Detailed analysis for Bi-LSTM
-                y_pred = (model.predict(x_test, verbose=0) > 0.5).astype("int32")
+                y_pred = (model.predict(x_test, verbose=0) > 0.5).astype("int32").flatten()
                 
                 print("\n[Bi-LSTM Classification Report]")
                 print(classification_report(y_test, y_pred, target_names=['Ham', 'Spam']))
