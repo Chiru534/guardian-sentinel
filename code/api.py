@@ -170,9 +170,7 @@ def load_artifacts():
     global model, tokenizer, preprocessor, processed_emails
     try:
         if GMAIL_AVAILABLE:
-            print(
-                "[READY] Initializing Gmail integration (will prompt for OAuth if needed)...")
-            gmail_service.authenticate_gmail(allow_interactive=True)
+            print("[READY] Gmail integration is available. Will wait for frontend sync request...")
 
         preprocessor = DataPreprocessor(stem=False)
         model = tf.keras.models.load_model(MODEL_PATH)
@@ -219,7 +217,7 @@ async def get_gmail_profile():
         raise HTTPException(
             status_code=503, detail="Gmail integration is unavailable.")
     try:
-        gmail_svc = gmail_service.authenticate_gmail(allow_interactive=False)
+        gmail_svc = gmail_service.authenticate_gmail(allow_interactive=True)
         profile = gmail_service.get_gmail_profile(gmail_svc)
         if not profile:
             raise HTTPException(
@@ -259,7 +257,7 @@ async def sync_live_inbox(request: SyncRequest):
         raise HTTPException(
             status_code=503, detail="Gmail integration is unavailable.")
     try:
-        gmail_svc = gmail_service.authenticate_gmail(allow_interactive=False)
+        gmail_svc = gmail_service.authenticate_gmail(allow_interactive=True)
         profile = gmail_service.get_gmail_profile(gmail_svc)
         if not profile:
             raise HTTPException(
