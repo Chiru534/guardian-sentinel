@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 app = FastAPI()
 
+
 @app.get("/sync-inbox")
 def sync():
     return [
@@ -24,9 +25,11 @@ def sync():
         }
     ]
 
+
 @app.post("/delete-email/{email_id}")
 def delete(email_id: str):
     return {"status": "deleted", "id": email_id}
+
 
 if __name__ == "__main__":
     import uvicorn

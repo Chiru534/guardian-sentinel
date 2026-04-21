@@ -11,10 +11,12 @@ try:
 except LookupError:
     nltk.download('stopwords')
 
+
 class DataPreprocessor:
     """
     Handles cleaning and text processing for raw email data.
     """
+
     def __init__(self, stem=False):
         self.stop_words = set(stopwords.words('english'))
         self.stemmer = SnowballStemmer('english')
@@ -65,17 +67,19 @@ class DataPreprocessor:
             "evasion_cleanup": r"(delete this email|do not reply to this|reply to my personal)",
             "credential_phishing": r"(password|login|verify account|sign in|access your account)"
         }
-        
+
         results = {}
         for stage, pattern in bec_signals.items():
             results[stage] = 1 if re.search(pattern, text) else 0
-            
+
         return results
+
 
 class TextTokenizer:
     """
     Manages numerical conversion of text sequences using Keras Tokenizer.
     """
+
     def __init__(self, vocab_size=10000, oov_token="<OOV>"):
         self.tokenizer = Tokenizer(num_words=vocab_size, oov_token=oov_token)
         self.vocab_size = vocab_size

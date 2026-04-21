@@ -1,3 +1,28 @@
+from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.layers import Embedding, LSTM, Bidirectional, Dense, Dropout, BatchNormalization
+from tensorflow.keras.models import Sequential
+from sklearn.metrics import accuracy_score
+from tensorflow.keras.layers import Embedding, LSTM  # Import LSTM here
+from keras.layers import SimpleRNN, Reshape
+from sklearn.metrics import confusion_matrix
+from tensorflow.keras.callbacks import EarlyStopping
+from keras.layers import Dense, Dropout
+from keras.models import Sequential
+import keras
+from keras.preprocessing.sequence import pad_sequences
+# Import Tokenizer from tensorflow.keras.preprocessing.text
+from tensorflow.keras.preprocessing.text import Tokenizer
+from nltk.stem.snowball import SnowballStemmer
+from wordcloud import WordCloud
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from nltk.stem import SnowballStemmer
+from nltk.corpus import stopwords
+import nltk
+import re
+import seaborn as sns
+import matplotlib.pyplot as plt
+import tensorflow as tf
 import numpy as np
 import pandas as pd
 
@@ -8,18 +33,9 @@ for dirname, _, filenames in os.walk('/kaggle/input'):
 
 # --- NEW CELL ---
 
-import tensorflow as tf
-import matplotlib.pyplot as plt
-import seaborn as sns
-import re
 
-import nltk
 nltk.download('stopwords')
-from nltk.corpus import stopwords
-from nltk.stem import SnowballStemmer
 
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import LabelEncoder
 
 # --- NEW CELL ---
 
@@ -33,12 +49,12 @@ data1.head()
 # --- NEW CELL ---
 
 data1 = data1.drop(['Unnamed: 0', 'label'], axis=1)
-data1 = data1.rename(columns = {"label_num" : "Label"})
+data1 = data1.rename(columns={"label_num": "Label"})
 data1.info()
 
 # --- NEW CELL ---
 
-sns.countplot(x="Label", data = data1)
+sns.countplot(x="Label", data=data1)
 
 # --- NEW CELL ---
 
@@ -46,14 +62,14 @@ data2.head()
 
 # --- NEW CELL ---
 
-data2 = data2.drop(["S. No."], axis = 1)
-data2 = data2.rename(columns = {"Message_body" : "text"})
+data2 = data2.drop(["S. No."], axis=1)
+data2 = data2.rename(columns={"Message_body": "text"})
 data2["Label"] = [1 if i == "Spam" else 0 for i in data2["Label"]]
 data2.info()
 
 # --- NEW CELL ---
 
-sns.countplot(x = "Label", data = data2)
+sns.countplot(x="Label", data=data2)
 
 # --- NEW CELL ---
 
@@ -63,22 +79,23 @@ data
 
 # --- NEW CELL ---
 
-sns.countplot(x="Label", data = data)
+sns.countplot(x="Label", data=data)
 
 # --- NEW CELL ---
 
-from wordcloud import WordCloud
 
-plt.figure(figsize = (20,20))
-wc = WordCloud(max_words = 2000 , width = 1600 , height = 800).generate(" ".join(data[data.Label == 1].text))
-plt.imshow(wc , interpolation = 'bilinear')
+plt.figure(figsize=(20, 20))
+wc = WordCloud(max_words=2000, width=1600, height=800).generate(
+    " ".join(data[data.Label == 1].text))
+plt.imshow(wc, interpolation='bilinear')
 plt.title("Spam Word Cloud")
 
 # --- NEW CELL ---
 
-plt.figure(figsize = (20,20))
-wc = WordCloud(max_words = 2000 , width = 1600 , height = 800).generate(" ".join(data[data.Label == 0].text))
-plt.imshow(wc , interpolation = 'bilinear')
+plt.figure(figsize=(20, 20))
+wc = WordCloud(max_words=2000, width=1600, height=800).generate(
+    " ".join(data[data.Label == 0].text))
+plt.imshow(wc, interpolation='bilinear')
 plt.title("Ham Word Cloud")
 
 # --- NEW CELL ---
@@ -88,9 +105,6 @@ plt.title("Ham Word Cloud")
 
 # text_cleaning_re = "@\S+|https?:\S+|http?:\S+|[^A-Za-z0-9]:\S+|subject:\S+|nbsp"
 
-import nltk
-from nltk.corpus import stopwords
-from nltk.stem.snowball import SnowballStemmer
 # Download the stopwords resource if you haven't already
 nltk.download('stopwords')
 
@@ -101,6 +115,7 @@ stemmer = SnowballStemmer('english')
 text_cleaning_re = "@\S+|https?:\S+|http?:\S+|[^A-Za-z0-9]:\S+|subject:\S+|nbsp"
 
 # --- NEW CELL ---
+
 
 def preprocess(text, stem=False):
     text = re.sub(text_cleaning_re, ' ', str(text).lower()).strip()
@@ -113,6 +128,7 @@ def preprocess(text, stem=False):
                 tokens.append(token)
     return " ".join(tokens)
 
+
 data.text = data.text.apply(lambda x: preprocess(x))
 data.head()
 
@@ -121,7 +137,7 @@ data.head()
 x = data['text']
 y = data['Label']
 x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2,
-                                         random_state=7)
+                                                    random_state=7)
 print("Train Data size:", len(x_train))
 print("Test Data size", len(x_test))
 
@@ -132,7 +148,6 @@ print("Test Data size", len(x_test))
 # --- NEW CELL ---
 
 # from keras.preprocessing.text import Tokenizer
-from tensorflow.keras.preprocessing.text import Tokenizer # Import Tokenizer from tensorflow.keras.preprocessing.text
 
 tokenizer = Tokenizer()
 tokenizer.fit_on_texts(x_train)
@@ -143,22 +158,17 @@ print("Vocabulary Size :", vocab_size)
 
 # --- NEW CELL ---
 
-from keras.preprocessing.sequence import pad_sequences
 
 x_train = pad_sequences(tokenizer.texts_to_sequences(x_train),
-                        maxlen = 50)
+                        maxlen=50)
 x_test = pad_sequences(tokenizer.texts_to_sequences(x_test),
-                       maxlen = 50)
+                       maxlen=50)
 
-print("Training X Shape:",x_train.shape)
-print("Testing X Shape:",x_test.shape)
+print("Training X Shape:", x_train.shape)
+print("Testing X Shape:", x_test.shape)
 
 # --- NEW CELL ---
 
-import keras
-from keras.models import Sequential
-from keras.layers import Dense, Dropout
-from tensorflow.keras.callbacks import EarlyStopping
 
 # --- NEW CELL ---
 
@@ -188,14 +198,18 @@ history = ann.fit(x_train, y_train,
 
 metrics = pd.DataFrame(history.history)
 # Rename column
-metrics.rename(columns = {'loss': 'Training_Loss', 'accuracy': 'Training_Accuracy',
-                         'val_loss': 'Validation_Loss', 'val_accuracy': 'Validation_Accuracy'}, inplace = True)
+metrics.rename(columns={'loss': 'Training_Loss', 'accuracy': 'Training_Accuracy',
+                        'val_loss': 'Validation_Loss', 'val_accuracy': 'Validation_Accuracy'}, inplace=True)
+
+
 def plot_graphs1(var1, var2, string):
     metrics[[var1, var2]].plot()
     plt.title('ANN Model: Training and Validation ' + string)
-    plt.xlabel ('Number of epochs')
+    plt.xlabel('Number of epochs')
     plt.ylabel(string)
     plt.legend([var1, var2])
+
+
 # Plot
 plot_graphs1('Training_Loss', 'Validation_Loss', 'loss')
 plot_graphs1('Training_Accuracy', 'Validation_Accuracy', 'accuracy')
@@ -207,7 +221,6 @@ y_pred = (y_pred > 0.5)
 
 # --- NEW CELL ---
 
-from sklearn.metrics import confusion_matrix
 cm = confusion_matrix(y_test, y_pred)
 
 # --- NEW CELL ---
@@ -228,11 +241,11 @@ print("Our accuracy is %{}".format(((cm[0][0] + cm[1][1])/1035)*100))
 # #rnn.add(Dropout(0.1))
 # rnn.add(Dense(1, activation='sigmoid'))
 
-from keras.layers import SimpleRNN, Reshape
 
 rnn = Sequential()
 # Reshape the input to be 3-dimensional
-rnn.add(Reshape((1, 50)))  # Assuming each sample has 50 features and 1 timestep
+# Assuming each sample has 50 features and 1 timestep
+rnn.add(Reshape((1, 50)))
 rnn.add(SimpleRNN(128, activation='relu', return_sequences=True))
 rnn.add(SimpleRNN(64, activation='relu', return_sequences=False))
 rnn.add(Dense(1, activation='sigmoid'))
@@ -257,17 +270,17 @@ print(y_test.shape)
 
 # --- NEW CELL ---
 
-x_train1 = x_train.reshape(4902,1,50)
-y_train1 = np.array(y_train).reshape(4902,1,1)
+x_train1 = x_train.reshape(4902, 1, 50)
+y_train1 = np.array(y_train).reshape(4902, 1, 1)
 
 # --- NEW CELL ---
 
-x_test1 = x_test.reshape(1226,1,50)
-y_test1 = np.array(y_test).reshape(1226,1,1)
+x_test1 = x_test.reshape(1226, 1, 50)
+y_test1 = np.array(y_test).reshape(1226, 1, 1)
 
 # --- NEW CELL ---
 
-early_stop = EarlyStopping(monitor = 'val_loss', patience=60)
+early_stop = EarlyStopping(monitor='val_loss', patience=60)
 
 history = rnn.fit(x_train1, y_train1,
                   batch_size=100,
@@ -280,14 +293,18 @@ history = rnn.fit(x_train1, y_train1,
 
 metrics = pd.DataFrame(history.history)
 # Rename column
-metrics.rename(columns = {'loss': 'Training_Loss', 'accuracy': 'Training_Accuracy',
-                         'val_loss': 'Validation_Loss', 'val_accuracy': 'Validation_Accuracy'}, inplace = True)
+metrics.rename(columns={'loss': 'Training_Loss', 'accuracy': 'Training_Accuracy',
+                        'val_loss': 'Validation_Loss', 'val_accuracy': 'Validation_Accuracy'}, inplace=True)
+
+
 def plot_graphs1(var1, var2, string):
     metrics[[var1, var2]].plot()
     plt.title('RNN Model: Training and Validation ' + string)
-    plt.xlabel ('Number of epochs')
+    plt.xlabel('Number of epochs')
     plt.ylabel(string)
     plt.legend([var1, var2])
+
+
 # Plot
 plot_graphs1('Training_Loss', 'Validation_Loss', 'loss')
 plot_graphs1('Training_Accuracy', 'Validation_Accuracy', 'accuracy')
@@ -295,9 +312,9 @@ plot_graphs1('Training_Accuracy', 'Validation_Accuracy', 'accuracy')
 # --- NEW CELL ---
 
 trainPredict = rnn.predict(x_train1)
-testPredict= rnn.predict(x_test1)
+testPredict = rnn.predict(x_test1)
 
-predicted=np.concatenate((trainPredict,testPredict),axis=0)
+predicted = np.concatenate((trainPredict, testPredict), axis=0)
 
 # --- NEW CELL ---
 
@@ -364,9 +381,6 @@ print("Our accuracy is %{}".format(trainScore[1]*100))
 # print(f"Test Accuracy: {accuracy:.2f}")
 
 
-from tensorflow.keras.layers import Embedding, LSTM # Import LSTM here
-
-
 # Hyperparameters
 MAX_SEQUENCE_LENGTH = 50
 EMBEDDING_DIM = 16
@@ -381,7 +395,8 @@ DROP_VALUE = 0.2
 early_stop = EarlyStopping(monitor='val_loss', patience=3)
 
 # Sample data (replace this with your actual data)
-texts = ["Free money!!!", "Call me now", "Meeting at 3pm", "Win a lottery"]  # Example text
+texts = ["Free money!!!", "Call me now",
+         "Meeting at 3pm", "Win a lottery"]  # Example text
 labels = [1, 1, 0, 1]  # Example labels (1: spam, 0: not spam)
 
 # Tokenization and padding
@@ -392,20 +407,24 @@ x_data = pad_sequences(sequences, maxlen=MAX_SEQUENCE_LENGTH, padding='post')
 y_data = np.array(labels)
 
 # Train-test split
-x_train, x_test, y_train, y_test = train_test_split(x_data, y_data, test_size=0.2, random_state=42)
+x_train, x_test, y_train, y_test = train_test_split(
+    x_data, y_data, test_size=0.2, random_state=42)
 
 # Model definition
 lstm = Sequential([
     Embedding(VOCAB_SIZE, EMBEDDING_DIM, input_length=MAX_SEQUENCE_LENGTH),
-    LSTM(N_LSTM, dropout=DROP_LSTM, return_sequences=True), # Now LSTM is recognized
-    LSTM(N_LSTM, dropout=DROP_LSTM, return_sequences=False),# Now LSTM is recognized
+    # Now LSTM is recognized
+    LSTM(N_LSTM, dropout=DROP_LSTM, return_sequences=True),
+    # Now LSTM is recognized
+    LSTM(N_LSTM, dropout=DROP_LSTM, return_sequences=False),
     Dense(N_DENSE, activation='relu'),
     Dropout(DROP_VALUE),
     Dense(1, activation='sigmoid')
 ])
 
 # Compile the model
-lstm.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+lstm.compile(loss='binary_crossentropy',
+             optimizer='adam', metrics=['accuracy'])
 
 # Train the model
 history = lstm.fit(
@@ -424,27 +443,28 @@ history = lstm.fit(
 # ... (rest of your code) ...
 
 # Import accuracy_score from sklearn.metrics
-from sklearn.metrics import accuracy_score
 
 # Evaluate the model
 y_pred = (lstm.predict(x_test) > 0.5).astype("int32")
-accuracy = accuracy_score(y_test, y_pred) # Now accuracy_score is defined
+accuracy = accuracy_score(y_test, y_pred)  # Now accuracy_score is defined
 print(f"Test Accuracy: {accuracy:.2f}")
 
 # --- NEW CELL ---
 
 metrics = pd.DataFrame(history.history)
 
-metrics.rename(columns= {'loss': 'Training_Loss', 'accuracy': 'Training_Accuracy',
-                         'val_loss': 'Validation_Loss', 'val_accuracy': 'Validation_Accuracy'},
-               inplace = True)
+metrics.rename(columns={'loss': 'Training_Loss', 'accuracy': 'Training_Accuracy',
+                        'val_loss': 'Validation_Loss', 'val_accuracy': 'Validation_Accuracy'},
+               inplace=True)
+
 
 def plot_graphs(var1, var2, string):
     metrics[[var1, var2]].plot()
     plt.title('LSTM Model: Training and Validation ' + string)
-    plt.xlabel ('Number of epochs')
+    plt.xlabel('Number of epochs')
     plt.ylabel(string)
     plt.legend([var1, var2])
+
 
 plot_graphs('Training_Loss', 'Validation_Loss', 'loss')
 plot_graphs('Training_Accuracy', 'Validation_Accuracy', 'accuracy')
@@ -477,7 +497,7 @@ lstm.layers[2].reset_states()
 # --- NEW CELL ---
 
 
-predicted2=np.concatenate((trainPredict2,testPredict2),axis=0)
+predicted2 = np.concatenate((trainPredict2, testPredict2), axis=0)
 
 # --- NEW CELL ---
 
@@ -486,14 +506,6 @@ print("Our accuracy is %{}".format(trainScore2[1]*100))
 
 # --- NEW CELL ---
 
-
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Embedding, LSTM, Bidirectional, Dense, Dropout, BatchNormalization
-from tensorflow.keras.callbacks import EarlyStopping
-from tensorflow.keras.optimizers import Adam
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
 
 # Define the parameters
 vocab_size = 5000  # Adjust to your dataset
@@ -506,19 +518,25 @@ num_epochs = 500  # Increase epochs to allow more training time
 
 # Define the model
 bi_lstm = Sequential()
-bi_lstm.add(Embedding(vocab_size, embedding_dim, input_length=MAX_SEQUENCE_LENGTH))
-bi_lstm.add(Bidirectional(LSTM(n_lstm, dropout=drop_lstm, return_sequences=False)))  # BiLSTM layer
+bi_lstm.add(Embedding(vocab_size, embedding_dim,
+            input_length=MAX_SEQUENCE_LENGTH))
+bi_lstm.add(Bidirectional(LSTM(n_lstm, dropout=drop_lstm,
+            return_sequences=False)))  # BiLSTM layer
 bi_lstm.add(Dropout(0.5))  # Add dropout layer after LSTM
-bi_lstm.add(Dense(64, activation='relu'))  # Add a Dense hidden layer for more learning capacity
+# Add a Dense hidden layer for more learning capacity
+bi_lstm.add(Dense(64, activation='relu'))
 bi_lstm.add(BatchNormalization())  # Batch normalization layer
 bi_lstm.add(Dense(1, activation='sigmoid'))  # Output layer
 
 # Compile the model
-adam_optimizer = Adam(learning_rate=0.0001)  # Lower learning rate for better convergence
-bi_lstm.compile(loss='binary_crossentropy', optimizer=adam_optimizer, metrics=['accuracy'])
+# Lower learning rate for better convergence
+adam_optimizer = Adam(learning_rate=0.0001)
+bi_lstm.compile(loss='binary_crossentropy',
+                optimizer=adam_optimizer, metrics=['accuracy'])
 
 # Early stopping to prevent overfitting
-early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
+early_stop = EarlyStopping(
+    monitor='val_loss', patience=3, restore_best_weights=True)
 
 # Fit the model
 history2 = bi_lstm.fit(x_train, y_train, epochs=num_epochs, batch_size=batch_size,
@@ -532,11 +550,14 @@ metrics.rename(columns={'loss': 'Training_Loss', 'accuracy': 'Training_Accuracy'
 # Print formatted metrics
 print(f"\nModel Performance:\n")
 print(f"Training Accuracy: {metrics['Training_Accuracy'].iloc[-1] * 100:.2f}%")
-print(f"Validation Accuracy: {metrics['Validation_Accuracy'].iloc[-1] * 100:.2f}%")
+print(
+    f"Validation Accuracy: {metrics['Validation_Accuracy'].iloc[-1] * 100:.2f}%")
 print(f"Training Loss: {metrics['Training_Loss'].iloc[-1]:.4f}")
 print(f"Validation Loss: {metrics['Validation_Loss'].iloc[-1]:.4f}")
 
 # Improved plotting function
+
+
 def plot_graphs1(var1, var2, string):
     metrics[[var1, var2]].plot()
     plt.title(f'BiLSTM Model: Training and Validation {string}')
@@ -545,6 +566,7 @@ def plot_graphs1(var1, var2, string):
     plt.legend([var1, var2])
     plt.grid(True)  # Add grid for better readability
     plt.show()
+
 
 # Plot the graphs
 plot_graphs1('Training_Loss', 'Validation_Loss', 'Loss')

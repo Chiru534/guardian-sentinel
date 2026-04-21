@@ -61,6 +61,7 @@ if 'current_view' not in st.session_state:
 if 'selected_email' not in st.session_state:
     st.session_state.selected_email = None
 
+
 def sync_inbox():
     """Fetches live Gmail streams through our Bi-LSTM + BEC Backend API."""
     with st.spinner("Synchronizing with Gmail API & running AI Scanning..."):
@@ -78,31 +79,36 @@ def sync_inbox():
                 else:
                     st.session_state.emails = data.get("emails", [])
                 st.session_state.selected_email = None
-                st.success(f"Successfully synced {len(st.session_state.emails)} messages.")
+                st.success(
+                    f"Successfully synced {len(st.session_state.emails)} messages.")
             else:
                 st.error(f"Backend Retrieval Error: {response.text}")
         except Exception as e:
             st.error(f"Network Connection Failed: {e}")
 
+
 # --- SIDEBAR NAVIGATION ---
 with st.sidebar:
-    st.markdown("<div class='sidebar-brand'>🛡️ Guardian Sentinel</div>", unsafe_allow_html=True)
-    
+    st.markdown("<div class='sidebar-brand'>🛡️ Guardian Sentinel</div>",
+                unsafe_allow_html=True)
+
     if st.button("🔄 Sync Live Inbox", use_container_width=True):
         sync_inbox()
-    
+
     st.divider()
-    
+
     st.session_state.current_view = st.radio(
         "Navigation",
         ["Safe Inbox", "Spam"],
         label_visibility="collapsed"
     )
-    
+
     st.divider()
     if st.session_state.emails:
-        safe_count = len([e for e in st.session_state.emails if not e['is_spam']])
-        threat_count = len([e for e in st.session_state.emails if e['is_spam']])
+        safe_count = len(
+            [e for e in st.session_state.emails if not e['is_spam']])
+        threat_count = len(
+            [e for e in st.session_state.emails if e['is_spam']])
         st.metric("Total Emails Sync'd", len(st.session_state.emails))
         st.metric("Safe Emails", safe_count)
         st.metric("Threats Detected", threat_count, delta_color="inverse")
@@ -114,15 +120,16 @@ col_master, col_detail = st.columns([1, 2])
 with col_master:
     # Filter the emails based on the AI verdict and current view from sidebar
     if st.session_state.current_view == "Safe Inbox":
-        display_list = [e for e in st.session_state.emails if not e.get('is_spam')]
+        display_list = [
+            e for e in st.session_state.emails if not e.get('is_spam')]
         header_text = "📥 Non-Spam Messages"
     else:
         display_list = [e for e in st.session_state.emails if e.get('is_spam')]
         header_text = "🛡️ Spam Threats"
-    
+
     # Display the filtered list
     st.subheader(header_text)
-    
+
     if not display_list:
         st.info("No emails to display in this view. Use 'Sync' to fetch updates.")
     else:
@@ -135,7 +142,7 @@ with col_master:
 with col_detail:
     if st.session_state.selected_email:
         mail = st.session_state.selected_email
-        
+
         # 1. Threat Warning Header (EXPLAINABLE AI)
         if mail['is_spam']:
             st.error("🚨 **BEC ATTACK DETECTED**")
@@ -143,7 +150,7 @@ with col_detail:
             This email has been moved to Quarantine. The **Bi-LSTM Neural Engine** identified malicious intent 
             pattern with **{mail['confidence']:.1%} confidence**.
             """)
-            
+
             # Display Triggered Heuristics
             if mail.get('bec_flags'):
                 st.markdown("#### Triggered AI Security Flags:")
@@ -152,10 +159,12 @@ with col_detail:
                 if isinstance(flags, dict):
                     for flag, active in flags.items():
                         if active:
-                            st.markdown(f"<span class='bec-flag'>🚩 {flag.replace('_', ' ').title()}</span>", unsafe_allow_html=True)
+                            st.markdown(
+                                f"<span class='bec-flag'>🚩 {flag.replace('_', ' ').title()}</span>", unsafe_allow_html=True)
                 elif isinstance(flags, list):
                     for flag in flags:
-                        st.markdown(f"<span class='bec-flag'>🚩 {flag.replace('_', ' ').title()}</span>", unsafe_allow_html=True)
+                        st.markdown(
+                            f"<span class='bec-flag'>🚩 {flag.replace('_', ' ').title()}</span>", unsafe_allow_html=True)
             st.divider()
 
         # 2. Standard Header Metadata
@@ -166,15 +175,15 @@ with col_detail:
             st.markdown(f"**From:** {mail['sender']}")
         with c2:
             st.write(f"Scanned: {mail['confidence']:.0%}")
-        
+
         st.divider()
-        
+
         # 3. Body Text (The "Email Body")
         st.markdown("##### Message Content")
         st.text(mail['body_text'])
-        
+
         st.divider()
-        
+
         # 4. Action Bar
         btn_col1, btn_col2, btn_col3 = st.columns(3)
         with btn_col1:
@@ -185,11 +194,14 @@ with col_detail:
                 # Phase 4 Automation Loop
                 if st.button("🗑️ Confirm Threat & Delete from Gmail", type="primary", use_container_width=True):
                     try:
-                        res = requests.post(f"{API_BASE_URL}/delete-email/{mail['id']}")
+                        res = requests.post(
+                            f"{API_BASE_URL}/delete-email/{mail['id']}")
                         if res.status_code == 200:
-                            st.session_state.emails = [e for e in st.session_state.emails if e['id'] != mail['id']]
+                            st.session_state.emails = [
+                                e for e in st.session_state.emails if e['id'] != mail['id']]
                             st.session_state.selected_email = None
-                            st.success("Neutralized: Threat moved to Gmail Trash.")
+                            st.success(
+                                "Neutralized: Threat moved to Gmail Trash.")
                             st.rerun()
                         else:
                             st.error("Action Failed Check API.")
@@ -204,6 +216,8 @@ with col_detail:
         st.write("")
         st.write("")
         st.image("https://img.icons8.com/clouds/200/security-checked.png")
-        st.markdown("<h3 style='text-align: center; color: #636e72;'>Guardian Sentinel: Select an email to scan</h3>", unsafe_allow_html=True)
+        st.markdown(
+            "<h3 style='text-align: center; color: #636e72;'>Guardian Sentinel: Select an email to scan</h3>", unsafe_allow_html=True)
 
-st.caption("Advanced AI Webmail Prototype | Phase 3 Interface Rollout | Secure MLOps System")
+st.caption(
+    "Advanced AI Webmail Prototype | Phase 3 Interface Rollout | Secure MLOps System")

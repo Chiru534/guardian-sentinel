@@ -7,10 +7,12 @@ from models import ANNModel, RNNModel, LSTMModel, BiLSTMModel, load_glove_embedd
 from tensorflow.keras.callbacks import EarlyStopping
 import pickle
 
+
 class SpamDetectionSystem:
     """
     Controller class to manage the full pipeline: data cleaning, tokenization, training, and evaluation.
     """
+
     def __init__(self, vocab_size=10000, max_len=50):
         self.vocab_size = vocab_size
         self.max_len = max_len
@@ -50,18 +52,22 @@ class SpamDetectionSystem:
 
         # Clean text
         print("Preprocessing text...")
-        self.data['text'] = self.data['text'].apply(lambda x: self.preprocessor.preprocess(x))
+        self.data['text'] = self.data['text'].apply(
+            lambda x: self.preprocessor.preprocess(x))
 
         # Split
         x = self.data['text']
         y = self.data['Label']
-        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(x, y, test_size=0.2, random_state=7)
-        
+        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(
+            x, y, test_size=0.2, random_state=7)
+
         # Tokenize and pad
         print("Tokenizing and padding sequences...")
         self.tokenizer.fit_on_texts(self.x_train)
-        self.x_train = self.tokenizer.pad_sequences(self.tokenizer.texts_to_sequences(self.x_train), max_len=self.max_len)
-        self.x_test = self.tokenizer.pad_sequences(self.tokenizer.texts_to_sequences(self.x_test), max_len=self.max_len)
+        self.x_train = self.tokenizer.pad_sequences(
+            self.tokenizer.texts_to_sequences(self.x_train), max_len=self.max_len)
+        self.x_test = self.tokenizer.pad_sequences(
+            self.tokenizer.texts_to_sequences(self.x_test), max_len=self.max_len)
 
     def train_model(self, model_type='LSTM', epochs=30, batch_size=32):
         """
@@ -72,7 +78,8 @@ class SpamDetectionSystem:
         elif model_type == 'RNN':
             model = RNNModel(input_dim=self.max_len)
         elif model_type == 'LSTM':
-            model = LSTMModel(vocab_size=self.vocab_size, input_len=self.max_len)
+            model = LSTMModel(vocab_size=self.vocab_size,
+                              input_len=self.max_len)
         elif model_type == 'BiLSTM':
             # [GloVe Integration] Loading pre-trained embeddings for BiLSTM
             embedding_dim = 100
@@ -80,33 +87,35 @@ class SpamDetectionSystem:
             if os.path.exists(glove_path):
                 print(f"Loading GloVe embeddings from {glove_path}...")
                 embedding_matrix = load_glove_embeddings(
-                    glove_path, 
-                    self.tokenizer.tokenizer.word_index, 
-                    self.vocab_size, 
+                    glove_path,
+                    self.tokenizer.tokenizer.word_index,
+                    self.vocab_size,
                     embedding_dim
                 )
             else:
-                print("Warning: GloVe file not found. Initializing BiLSTM with random embeddings.")
+                print(
+                    "Warning: GloVe file not found. Initializing BiLSTM with random embeddings.")
                 embedding_matrix = None
-                
+
             model = BiLSTMModel(
-                vocab_size=self.vocab_size, 
-                embedding_dim=embedding_dim, 
-                input_len=self.max_len, 
+                vocab_size=self.vocab_size,
+                embedding_dim=embedding_dim,
+                input_len=self.max_len,
                 embedding_matrix=embedding_matrix
             )
         else:
             raise ValueError(f"Unknown model type: {model_type}")
 
         model.compile()
-        early_stop = EarlyStopping(monitor='val_loss', patience=3, restore_best_weights=True)
-        
+        early_stop = EarlyStopping(
+            monitor='val_loss', patience=3, restore_best_weights=True)
+
         print(f"Starting training for {model_type}...")
-        history = model.fit(self.x_train, self.y_train, 
-                            validation_data=(self.x_test, self.y_test), 
-                            epochs=epochs, batch_size=batch_size, 
+        history = model.fit(self.x_train, self.y_train,
+                            validation_data=(self.x_test, self.y_test),
+                            epochs=epochs, batch_size=batch_size,
                             callbacks=[early_stop])
-        
+
         return model, history
 
     def evaluate_model(self, model):
@@ -118,28 +127,33 @@ class SpamDetectionSystem:
         print(f"Test Accuracy: {accuracy*100:.2f}%")
         return accuracy
 
+
 if __name__ == "__main__":
     system = SpamDetectionSystem()
-    
+
     # Files must exist in the directory
     try:
         system.load_data()
-        
+
         # Train and evaluate ANN
-        ann_model, _ = system.train_model(model_type='ANN', epochs=1, batch_size=64)
+        ann_model, _ = system.train_model(
+            model_type='ANN', epochs=1, batch_size=64)
         ann_model.model.save('ann_model.h5')
 
         # Train and evaluate RNN
-        rnn_model, _ = system.train_model(model_type='RNN', epochs=1, batch_size=64)
+        rnn_model, _ = system.train_model(
+            model_type='RNN', epochs=1, batch_size=64)
         rnn_model.model.save('rnn_model.h5')
 
         # Train and evaluate BiLSTM
-        bilstm_model, _ = system.train_model(model_type='BiLSTM', epochs=1, batch_size=64)
+        bilstm_model, _ = system.train_model(
+            model_type='BiLSTM', epochs=1, batch_size=64)
         bilstm_model.model.save('bilstm_model.h5')
 
         # [Phase 3 Deployment] Serialization of artifacts
         with open('tokenizer.pickle', 'wb') as handle:
-            pickle.dump(system.tokenizer.tokenizer, handle, protocol=pickle.HIGHEST_PROTOCOL)
+            pickle.dump(system.tokenizer.tokenizer, handle,
+                        protocol=pickle.HIGHEST_PROTOCOL)
         print("Success: ANN, RNN, Bi-LSTM, and tokenizer saved.")
     except FileNotFoundError as e:
         print(f"Error: {e}. Please ensure data files are in the CWD.")

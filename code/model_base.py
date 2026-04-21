@@ -1,10 +1,11 @@
 from abc import ABC, abstractmethod
 
+
 class ModelBase(ABC):
     """
     Abstract machine learning model base class defining the standard interface.
     """
-    
+
     @abstractmethod
     def build_model(self):
         """

@@ -24,6 +24,7 @@ SYNC_SCOPE_VALUES = (
     'all',
 )
 
+
 def authenticate_gmail(allow_interactive=True):
     """
     [Phase 1 Authentication] 
@@ -50,7 +51,8 @@ def authenticate_gmail(allow_interactive=True):
                 # Auto-delete the stale token so the next restart triggers a clean OAuth flow
                 if os.path.exists(TOKEN_FILE):
                     os.remove(TOKEN_FILE)
-                    print(f"[CLEANUP] Removed stale {TOKEN_FILE}. Restart the server to re-authenticate.")
+                    print(
+                        f"[CLEANUP] Removed stale {TOKEN_FILE}. Restart the server to re-authenticate.")
 
         if not creds or not creds.valid:
             if not allow_interactive:
@@ -60,15 +62,18 @@ def authenticate_gmail(allow_interactive=True):
                 )
 
             if not os.path.exists(CREDENTIALS_FILE):
-                raise FileNotFoundError(f"CRITICAL: '{CREDENTIALS_FILE}' not found. Download it from Google Cloud Console.")
+                raise FileNotFoundError(
+                    f"CRITICAL: '{CREDENTIALS_FILE}' not found. Download it from Google Cloud Console.")
 
             print("[LOG] Starting new OAuth2 Authentication Flow...")
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
+            flow = InstalledAppFlow.from_client_secrets_file(
+                CREDENTIALS_FILE, SCOPES)
             try:
                 creds = flow.run_local_server(port=0)
             except OSError as local_server_error:
                 if getattr(local_server_error, "winerror", None) == 10013 or isinstance(local_server_error, socket.error):
-                    print("[WARNING] Local OAuth callback server failed. Falling back to manual console auth.")
+                    print(
+                        "[WARNING] Local OAuth callback server failed. Falling back to manual console auth.")
                     if not hasattr(flow, "run_console"):
                         raise RuntimeError(
                             "Local OAuth callback server could not start and console authentication is unavailable in this library version."
@@ -90,6 +95,7 @@ def authenticate_gmail(allow_interactive=True):
 
     return build('gmail', 'v1', credentials=creds)
 
+
 def get_gmail_profile(service):
     """Return the connected Gmail profile metadata."""
     try:
@@ -97,6 +103,7 @@ def get_gmail_profile(service):
     except HttpError as error:
         print(f"[ERROR] Unable to fetch Gmail profile: {error}")
         return None
+
 
 def clean_html_for_ai(html_content):
     """
@@ -110,6 +117,7 @@ def clean_html_for_ai(html_content):
     lines = (line.strip() for line in text.splitlines())
     chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
     return '\n'.join(chunk for chunk in chunks if chunk)
+
 
 def decode_part_body(service, message_id, part_body):
     """
@@ -133,6 +141,7 @@ def decode_part_body(service, message_id, part_body):
 
     return ""
 
+
 def extract_body_dual(service, message_id, payload):
     """
     [Dual Extraction] 
@@ -141,13 +150,13 @@ def extract_body_dual(service, message_id, payload):
     - 'html': Original HTML structure for the premium UI.
     """
     result = {"text": "", "html": ""}
-    
+
     # helper for recursive traversal
     def traverse(p):
         mime_type = p.get('mimeType')
         part_body = p.get('body', {})
         decoded_content = decode_part_body(service, message_id, part_body)
-        
+
         if mime_type == 'text/plain' and decoded_content:
             result["text"] += decoded_content
         elif mime_type == 'text/html' and decoded_content:
@@ -156,13 +165,14 @@ def extract_body_dual(service, message_id, payload):
             # If we don't have text yet, clean this HTML for the text version
             if not result["text"]:
                 result["text"] = clean_html_for_ai(decoded_html)
-        
+
         if 'parts' in p:
             for part in p['parts']:
                 traverse(part)
 
     traverse(payload)
     return result
+
 
 def _get_scope_requests(scope):
     if scope == 'read':
@@ -180,6 +190,7 @@ def _get_scope_requests(scope):
     if scope == 'all':
         return [{}]
     raise ValueError(f"Unsupported sync scope: {scope}")
+
 
 def _list_message_refs(service, label_ids=None, query=None, limit=None):
     refs = []
@@ -215,6 +226,7 @@ def _list_message_refs(service, label_ids=None, query=None, limit=None):
 
     return refs
 
+
 def fetch_emails(service, scope='unread', limit=None):
     """
     Fetch Gmail messages for the selected mailbox scope.
@@ -228,7 +240,8 @@ def fetch_emails(service, scope='unread', limit=None):
                 service,
                 label_ids=request.get("label_ids"),
                 query=request.get("query"),
-                limit=None if limit is None else max(limit - len(message_refs), 0),
+                limit=None if limit is None else max(
+                    limit - len(message_refs), 0),
             )
             for ref in refs:
                 if ref['id'] in seen_ids:
@@ -246,16 +259,21 @@ def fetch_emails(service, scope='unread', limit=None):
             print(f"[LOG] No Gmail messages found for scope '{scope}'.")
             return []
 
-        print(f"[LOG] Fetching content for {len(message_refs)} messages from scope '{scope}'...")
+        print(
+            f"[LOG] Fetching content for {len(message_refs)} messages from scope '{scope}'...")
         email_data = []
 
         for msg in message_refs:
-            full_msg = service.users().messages().get(userId='me', id=msg['id']).execute()
+            full_msg = service.users().messages().get(
+                userId='me', id=msg['id']).execute()
             payload = full_msg.get('payload', {})
             headers = payload.get('headers', [])
-            date_sent = next((h['value'] for h in headers if h['name'].lower() == 'date'), "")
-            subject = next((h['value'] for h in headers if h['name'].lower() == 'subject'), "No Subject")
-            sender = next((h['value'] for h in headers if h['name'].lower() == 'from'), "Unknown Sender")
+            date_sent = next(
+                (h['value'] for h in headers if h['name'].lower() == 'date'), "")
+            subject = next(
+                (h['value'] for h in headers if h['name'].lower() == 'subject'), "No Subject")
+            sender = next(
+                (h['value'] for h in headers if h['name'].lower() == 'from'), "Unknown Sender")
 
             dual_body = extract_body_dual(service, msg['id'], payload)
             email_data.append({
@@ -272,6 +290,7 @@ def fetch_emails(service, scope='unread', limit=None):
         print(f"[ERROR] An API error occurred: {error}")
         return []
 
+
 def fetch_unread_emails(service, max_results=20):
     """
     [Targeted Fetching] 
@@ -279,20 +298,24 @@ def fetch_unread_emails(service, max_results=20):
     """
     return fetch_emails(service, scope='unread', limit=max_results)
 
+
 def trash_email(service, user_id='me', msg_id=None):
     """Moves email to Trash."""
     try:
-        if not msg_id: return None
+        if not msg_id:
+            return None
         return service.users().messages().trash(userId=user_id, id=msg_id).execute()
     except Exception as error:
         print(f"Trash error: {error}")
         return None
+
 
 if __name__ == '__main__':
     try:
         svc = authenticate_gmail()
         emails = fetch_unread_emails(svc, max_results=3)
         for e in emails:
-            print(f"Subject: {e['subject']} | HTML Length: {len(e['body_html'])}")
+            print(
+                f"Subject: {e['subject']} | HTML Length: {len(e['body_html'])}")
     except Exception as ex:
         print(f"Error: {ex}")
